@@ -1,0 +1,1 @@
+void libb_say_ok(void);
