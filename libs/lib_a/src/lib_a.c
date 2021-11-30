@@ -1,3 +1,4 @@
+#include <stdio.h>
 
 void liba_say_ok(void)
 {

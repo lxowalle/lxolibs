@@ -2,11 +2,12 @@ SUBDIRS =   libs/lib_a/src\
             libs/lib_b/src\
             libs/lib_c/src\
             apps/app1\
-            apps/app2
+            apps/app2\
+            apps/template
 
 # automake need known where it is
 
-CURRENTPATH= ${PWD}
+CURRENTPATH = ${PWD}
 
 # head files while linking
 

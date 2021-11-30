@@ -1,1 +1,1 @@
-void liba_say_ok(void);
+void libc_say_ok(void);

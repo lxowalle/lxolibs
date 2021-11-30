@@ -2,6 +2,7 @@
 
 noinst_PROGRAMS= app1
 
+SUBDIRS = .
 # main entry file
 
 app1_SOURCES= main.c

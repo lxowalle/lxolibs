@@ -1,3 +1,7 @@
+#include "lib_a.h"
+#include "lib_b.h"
+#include "lib_c.h"
+
 int main(void)
 {
     liba_say_ok();

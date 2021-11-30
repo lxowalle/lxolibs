@@ -48,3 +48,7 @@ autom4te.cache
 # (which is called by configure script))
 Makefile
 *.Po
+.deps
+.dirstamp
+*.o
+*.a
