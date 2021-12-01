@@ -3,6 +3,7 @@ SUBDIRS =   libs/lib_a/src\
             libs/lib_c/src\
             apps/app1\
             apps/app2\
+            apps/core\
             apps/template
 
 # automake need known where it is

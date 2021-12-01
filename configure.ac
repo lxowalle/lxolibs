@@ -22,6 +22,7 @@ AC_CONFIG_FILES([Makefile
                  apps/app1/Makefile
                  apps/app2/Makefile
                  apps/template/Makefile
+                 apps/core/Makefile
                  libs/lib_a/src/Makefile
                  libs/lib_b/src/Makefile
                  libs/lib_c/src/Makefile])
