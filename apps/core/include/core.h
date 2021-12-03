@@ -1,29 +1,33 @@
 #ifndef __CORE_H
 #define __CORE_H
 
-typedef struct nerve nerve_t;
 typedef struct neurons neurons_t;
 
 /**
- * @brief tree
+ * @brief 
+ */
+typedef enum nerve_type
+{
+    NERVE_TYPE_NONE = 0,
+    NERVE_TYPE_ZERO,
+    NERVE_TYPE_ONE,
+}nerve_type_t;
+
+/**
+ * @brief nerve
  * 
  */
-typedef struct tree
+typedef struct nerve
 {
-    int base;
+    nerve_type_t type;
+    struct nerve *father, *zero, *one;
     char name[15];
-    int type;
-    struct tree *father, *zero, *one;
-}tree_t;
+    void *param;
+}nerve_t;
 
 struct neurons_ops{
     void (*init)(neurons_t *param);
     void (*exit)(neurons_t *param);
-};
-
-struct nerve{
-    int type;
-    struct nerve *next, *previous;
 };
 
 struct neurons{
@@ -35,13 +39,12 @@ struct neurons{
     // struct nerve *axon_rear;
 };
 
-
 neurons_t *neurons_create(void);
 
-tree_t *create_tree(void);
-void destory_tree(tree_t **tree);
-tree_t *connect_tree(tree_t *father, int type, tree_t *child);
-tree_t *traverse_tree(tree_t *tree);
-tree_t *print_tree(tree_t *tree);
+nerve_t *create_nerve(void);
+void destory_nerve(nerve_t **nerve);
+nerve_t *connect_nerve(nerve_t *father, int type, nerve_t *child);
+nerve_t *traverse_nerve(nerve_t *nerve);
+nerve_t *print_nerve(nerve_t *nerve);
 
 #endif // __CORE_H

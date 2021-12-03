@@ -5,46 +5,46 @@
 #include <stdio.h>
 #include <string.h>
 
-static void _printf_tree(tree_t *tree, int type,  int level)
+static void _printf_nerve(nerve_t *nerve, int type,  int level)
 {
 	int i;
 
-	if (!tree)  return;
+	if (!nerve)  return;
 
-	_printf_tree(tree->one, 2, level + 1);
+	_printf_nerve(nerve->one, 2, level + 1);
 	switch (type)
 	{
 	case 0:
-		printf("%s\n", tree->name);
+		printf("%s\n", nerve->name);
 		break;
 	case 1:
 		for (i = 0; i < level; i ++)	printf("\t");
-		printf("\\ %s\n", tree->name);
+		printf("\\ %s\n", nerve->name);
 		break;
 	case 2:
 		for (i = 0; i < level; i ++)	printf("\t");
-		printf("/ %s\n", tree->name);
+		printf("/ %s\n", nerve->name);
 		break;	
 	}
-	_printf_tree(tree->zero, 1,  level + 1);
+	_printf_nerve(nerve->zero, 1,  level + 1);
 }
 
 int main(int argc, char** argv)
 {
-    tree_t *a = create_tree();
-    tree_t *b = create_tree();
-    tree_t *c = create_tree();
-    tree_t *d = create_tree();
-    tree_t *e = create_tree();
-    tree_t *f = create_tree();
-    tree_t *g = create_tree();
-    tree_t *h = create_tree();
-    tree_t *i = create_tree();
-    tree_t *j = create_tree();
-    tree_t *k = create_tree();
-    tree_t *l = create_tree();
-    tree_t *m = create_tree();
-    tree_t *n = create_tree();
+    nerve_t *a = create_nerve();
+    nerve_t *b = create_nerve();
+    nerve_t *c = create_nerve();
+    nerve_t *d = create_nerve();
+    nerve_t *e = create_nerve();
+    nerve_t *f = create_nerve();
+    nerve_t *g = create_nerve();
+    nerve_t *h = create_nerve();
+    nerve_t *i = create_nerve();
+    nerve_t *j = create_nerve();
+    nerve_t *k = create_nerve();
+    nerve_t *l = create_nerve();
+    nerve_t *m = create_nerve();
+    nerve_t *n = create_nerve();
 
     strcpy(a->name, "a");
     strcpy(b->name, "b");
@@ -85,27 +85,27 @@ int main(int argc, char** argv)
       \ / 
        a
     */ 
-    connect_tree(a, 1, b);
-    connect_tree(a, 0, c);
-    connect_tree(b, 1, d);
-    connect_tree(b, 0, e);
-    connect_tree(c, 1, f);
-    connect_tree(c, 0, g);
-    connect_tree(f, 1, h);
-    connect_tree(g, 1, i);
-    connect_tree(h, 1, j);
-    connect_tree(h, 0, k);
+    connect_nerve(a, 1, b);
+    connect_nerve(a, 0, c);
+    connect_nerve(b, 1, d);
+    connect_nerve(b, 0, e);
+    connect_nerve(c, 1, f);
+    connect_nerve(c, 0, g);
+    connect_nerve(f, 1, h);
+    connect_nerve(g, 1, i);
+    connect_nerve(h, 1, j);
+    connect_nerve(h, 0, k);
 
-    connect_tree(k, 1, l);
-    connect_tree(k, 0, m);
-    connect_tree(m, 0, n);
-    traverse_tree(a);
-    print_tree(a);
+    connect_nerve(k, 1, l);
+    connect_nerve(k, 0, m);
+    connect_nerve(m, 0, n);
+    traverse_nerve(a);
+    print_nerve(a);
 
-    destory_tree(&a);
-    destory_tree(&b);
-    destory_tree(&c);
-    destory_tree(&d);
-    destory_tree(&e);
+    destory_nerve(&a);
+    destory_nerve(&b);
+    destory_nerve(&c);
+    destory_nerve(&d);
+    destory_nerve(&e);
     return 0;
 }

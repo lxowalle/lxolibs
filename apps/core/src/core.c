@@ -7,42 +7,42 @@
 #define _DBG()  printf("%s,%d\n", __func__, __LINE__)
 
 /**
- * @brief Create a tree
+ * @brief Create a nerve
  */
 
-tree_t *create_tree(void)
+nerve_t *create_nerve(void)
 {
-    tree_t *new_tree = (tree_t  *)calloc(1, sizeof(tree_t));
-    if (!new_tree)
+    nerve_t *new_nerve = (nerve_t  *)calloc(1, sizeof(nerve_t));
+    if (!new_nerve)
     {
-        LOGE("Create new tree error!\n");
+        LOGE("Create new nerve error!\n");
         return NULL;
     }
 
-    return new_tree;
+    return new_nerve;
 }
 
 /**
- * @brief Destory a tree
+ * @brief Destory a nerve
  * 
  */
-void destory_tree(tree_t **tree)
+void destory_nerve(nerve_t **nerve)
 {
-    if (*tree)
+    if (*nerve)
     {
-        if ((*tree)->zero != NULL)
-            (*tree)->zero->father = NULL;
-        if ((*tree)->one)
-            (*tree)->one->father = NULL;
-        free(*tree);
-        *tree = NULL;
+        if ((*nerve)->zero)
+            (*nerve)->zero->father = NULL;
+        if ((*nerve)->one)
+            (*nerve)->one->father = NULL;
+        free(*nerve);
+        *nerve = NULL;
     }
 }
 
 /**
- * @brief Connect tree
+ * @brief Connect nerve
  */
-tree_t *connect_tree(tree_t *father, int type, tree_t *child)
+nerve_t *connect_nerve(nerve_t *father, int type, nerve_t *child)
 {
     if (!father || !child)  
     {
@@ -54,7 +54,7 @@ tree_t *connect_tree(tree_t *father, int type, tree_t *child)
     {
         if (father->one)
         {
-            LOGW("Can not connect tree\n");
+            LOGW("Can not connect nerve\n");
             return father;
         }
 
@@ -66,7 +66,7 @@ tree_t *connect_tree(tree_t *father, int type, tree_t *child)
     {
         if (father->zero)
         {
-            LOGW("Can not connect tree\n");
+            LOGW("Can not connect nerve\n");
             return father;
         }
 
@@ -82,51 +82,51 @@ tree_t *connect_tree(tree_t *father, int type, tree_t *child)
  * @brief 
  * 
  */
-tree_t *traverse_tree(tree_t *tree)
+nerve_t *traverse_nerve(nerve_t *nerve)
 {
-    if (tree)
+    if (nerve)
     { 
-        traverse_tree(tree->one);
-        traverse_tree(tree->zero);
-        LOGI("%s\n", tree->name);
+        traverse_nerve(nerve->one);
+        traverse_nerve(nerve->zero);
+        LOGI("%s\n", nerve->name);
     }
 }
 
 
-static void _print_tree(tree_t *tree, int type,  int level)
+static void _print_nerve(nerve_t *nerve, int type,  int level)
 {
 	int i;
 
-	if (!tree)  return;
+	if (!nerve)  return;
 
-	_print_tree(tree->one, 2, level + 1);
+	_print_nerve(nerve->one, 2, level + 1);
 	switch (type)
 	{
 	case 0:
-		printf("%s\n", tree->name);
+		printf("%s\n", nerve->name);
 		break;
 	case 1:
 		for (i = 0; i < level; i ++)	printf("\t");
-		printf("\\ %s\n", tree->name);
+		printf("\\ %s\n", nerve->name);
 		break;
 	case 2:
 		for (i = 0; i < level; i ++)	printf("\t");
-		printf("/ %s\n", tree->name);
+		printf("/ %s\n", nerve->name);
 		break;	
 	}
-	_print_tree(tree->zero, 1,  level + 1);
+	_print_nerve(nerve->zero, 1,  level + 1);
 }
 
 /**
  * @brief 
  */
-tree_t *print_tree(tree_t *tree)
+nerve_t *print_nerve(nerve_t *nerve)
 {
-    if (!tree)  return NULL;
+    if (!nerve)  return NULL;
 
-    _print_tree(tree, 0, 0);
+    _print_nerve(nerve, 0, 0);
 
-    return tree;
+    return nerve;
 }
 
 /**
@@ -146,20 +146,7 @@ tree_t *print_tree(tree_t *tree)
  * _/                           \__
  *  |                           |  
 */
-nerve_t *nerve_create(void)
-{
-    nerve_t *new = (nerve_t *)malloc(sizeof(nerve_t));
-    if (!new)   return NULL;
 
-    new->type = 0xFF;
-
-    return new;
-}
-
-int nerve_add(nerve_t *dst, nerve_t *new)
-{
-    if (!dst || !new)   return -1;
-}
 
 neurons_t *neurons_create(void)
 {
@@ -175,13 +162,13 @@ neurons_t *neurons_create(void)
     //     return NULL;
     // }
 
-    new->cell = nerve_create();
-    if (!new->cell)
-    {
-        free(new);
-        // free(new->dendrites);
-        return NULL;
-    }
+    // new->cell = nerve_create();
+    // if (!new->cell)
+    // {
+    //     free(new);
+    //     // free(new->dendrites);
+    //     return NULL;
+    // }
 
     // new->axon_rear = nerve_create();
     // if (!new->axon_rear)
@@ -192,19 +179,19 @@ neurons_t *neurons_create(void)
     //     return NULL;
     // }
 
-    new->axon = nerve_create();
-    if (!new->axon)
-    {
-        free(new);
-        // free(new->dendrites);
-        free(new->cell);
-        // free(new->axon_rear);
-        return NULL;
-    }
+    // new->axon = nerve_create();
+    // if (!new->axon)
+    // {
+    //     free(new);
+    //     // free(new->dendrites);
+    //     free(new->cell);
+    //     // free(new->axon_rear);
+    //     return NULL;
+    // }
 
     // new->axon->next = new->axon_rear;
-    new->axon->previous = new->cell;
-    new->cell->next = new->axon;
+    // new->axon->previous = new->cell;
+    // new->cell->next = new->axon;
 
     return new;
 }
