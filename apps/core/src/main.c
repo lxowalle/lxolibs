@@ -61,37 +61,14 @@ int main(int argc, char** argv)
     strcpy(m->name, "m");
     strcpy(n->name, "n");
 
-    /**     
-     *    a___c
-     *    |       
-     *    b___c
-     *    |   | 
-     *    | \
-     *    d e_
-     *      
-     *      |-
-     *     / 
-     *    b
-     *    |_
-     * a_/
-     * 
-     */
-    /*
-   
-
-    d e f g
-    \ / \ /
-      b c
-      \ / 
-       a
-    */ 
     connect_nerve(a, 1, b);
     connect_nerve(a, 0, c);
     connect_nerve(b, 1, d);
     connect_nerve(b, 0, e);
     connect_nerve(c, 1, f);
     connect_nerve(c, 0, g);
-    connect_nerve(f, 1, h);
+
+    // connect_nerve(f, 1, h);
     connect_nerve(g, 1, i);
     connect_nerve(h, 1, j);
     connect_nerve(h, 0, k);
@@ -99,13 +76,45 @@ int main(int argc, char** argv)
     connect_nerve(k, 1, l);
     connect_nerve(k, 0, m);
     connect_nerve(m, 0, n);
-    traverse_nerve(a);
+    // traverse_nerve(a);
     print_nerve(a);
+    LOGI("===============================================\n");
+    print_nerve(h);
 
+    LOGI("===============================================\n");
+
+    neuron_t *new_psedounipolar = neuron_create(NEURONS_TYPE_PSEUDOUNIPOLAR);
+    if (!new_psedounipolar)
+    {
+        LOGE("Error,create neuron\n");
+    }
+
+    neuron_t *neuron_bipolar = neuron_create(NEURONS_TYPE_BIPOLAR);
+    if (!neuron_bipolar)
+    {
+        LOGE("Error,create neuron\n");
+    }
+
+    neuron_t *neuron_multipolar = neuron_create(NEURONS_TYPE_MULTIPOLAR);
+    if (!neuron_multipolar)
+    {
+        LOGE("Error,create neuron\n");
+    }
+
+    neuron_control(new_psedounipolar, NEURONS_CTLSET_CONNECTAXON, a);
+    neuron_control(new_psedounipolar, NEURONS_CTLSET_CONNECTSURROUND, h);
+    
+    print_neuron(new_psedounipolar);
+    
     destory_nerve(&a);
     destory_nerve(&b);
     destory_nerve(&c);
     destory_nerve(&d);
     destory_nerve(&e);
+
+    neuron_destory(&new_psedounipolar);
+    neuron_destory(&neuron_bipolar);
+    neuron_destory(&neuron_multipolar);
+
     return 0;
 }
