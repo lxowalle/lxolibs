@@ -1,6 +1,7 @@
 #include "main.h"
-#include "core.h"
 #include "log.h"
+#include "core.h"
+#include "sensor.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -103,9 +104,11 @@ int main(int argc, char** argv)
 
     neuron_control(new_psedounipolar, NEURONS_CTLSET_CONNECTAXON, a);
     neuron_control(new_psedounipolar, NEURONS_CTLSET_CONNECTSURROUND, h);
-    
+
     print_neuron(new_psedounipolar);
-    
+
+    create_sensor();
+
     destory_nerve(&a);
     destory_nerve(&b);
     destory_nerve(&c);
