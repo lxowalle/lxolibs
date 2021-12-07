@@ -2,6 +2,7 @@
 #define __SENSOR_H
 
 #include "core.h"
+#include "log.h"
 
 typedef struct sensor_t sensor_t;
 
@@ -18,24 +19,11 @@ typedef struct
     int (*feel)(sensor_t *sensor, ...);
 }sensor_ops_t;
 
-typedef struct sensor_t
+struct sensor_t
 {
     sensor_type_t type;
     sensor_ops_t ops;
-    nerve_t *child;
 };
-
-typedef struct
-{
-    int (*connect_nerve)(sensor_t *sensor, nerve_t *child);
-}sensor_touch_ops_t;
-
-typedef struct
-{
-    sensor_t ext;
-    sensor_touch_ops_t *ops; 
-    nerve_t *child;
-}sensor_touch_t;
 
 sensor_t *create_sensor(sensor_type_t type);
 

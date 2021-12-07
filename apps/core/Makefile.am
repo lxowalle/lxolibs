@@ -9,7 +9,7 @@ noinst_PROGRAMS       = core              #   编译为可执行文件(不安装
 # core_LTLIBRARIES  =                       #   编译为库文件(libtool)(安装目录与可执行文件相同)
 
 core_SOURCES        =   src/main.c src/core.c \
-                        src/sensor.c
+                        src/sensor/sensor.c src/sensor/sensor_touch.c
 
 noinst_HEADERS      =   include/main.h include/core.h \
                         include/log.h include/sensor.h \

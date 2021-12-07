@@ -4,6 +4,7 @@
 #include "sensor.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 static void _printf_nerve(nerve_t *nerve, int type,  int level)
 {
@@ -104,19 +105,19 @@ int main(int argc, char** argv)
     neuron_control(new_psedounipolar, NEURONS_CTLSET_CONNECTAXON, a);
     neuron_control(new_psedounipolar, NEURONS_CTLSET_CONNECTSURROUND, h);
 
-    print_neuron(new_psedounipolar);
+    // print_neuron(new_psedounipolar);
 
-    sensor_t *sensor = create_sensor(SENSOR_TOUCH);
+    sensor_t *sensor = (sensor_t *)create_sensor(SENSOR_TOUCH);
     if (sensor)
     {
         LOGI("Create sensor successfully\n");
-        LOGI("sensor type:%d\n", sensor->type);
-        if (!sensor->child) LOGW("sensor child is NULL\n");
-        if (!i) LOGW("i is NULL\n");
         sensor->ops.connect_nerve(sensor, i);
         print_neuron(new_psedounipolar);
-
-        sensor->ops.feel(sensor, 123);
+        sensor->ops.feel(sensor);
+    }
+    else
+    {
+        LOGE("Create failed\n");
     }
 
     destory_nerve(&a);
@@ -128,6 +129,8 @@ int main(int argc, char** argv)
     neuron_destory(&new_psedounipolar);
     neuron_destory(&neuron_bipolar);
     neuron_destory(&neuron_multipolar);
+
+
 
     return 0;
 }
