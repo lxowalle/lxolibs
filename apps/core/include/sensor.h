@@ -15,6 +15,7 @@ typedef enum
 typedef struct
 {
     int (*connect_nerve)(sensor_t *sensor, nerve_t *child);
+    int (*feel)(sensor_t *sensor, ...);
 }sensor_ops_t;
 
 typedef struct sensor_t

@@ -10,7 +10,6 @@
 /**
  * @brief Create a nerve
  */
-
 nerve_t *create_nerve(void)
 {
     nerve_t *new_nerve = (nerve_t  *)calloc(1, sizeof(nerve_t));

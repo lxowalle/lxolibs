@@ -3,10 +3,23 @@
 #include "log.h"
 
 #include <stdlib.h>
+#include <stdarg.h>
 
 static int _sensor_connect_nerve(sensor_t *sensor, nerve_t *child)
 {
     return connect_nerve(child, 0, sensor->child);
+}
+
+static int _sensor_feel(sensor_t *sensor, ...)
+{
+    va_list ap;
+    va_start(ap, sensor);
+
+    int data = va_arg(ap, int);
+
+    LOGI("Input data:%d\n", data);
+
+    va_end(ap);
 }
 
 sensor_t *create_sensor(sensor_type_t type)
@@ -30,6 +43,7 @@ sensor_t *create_sensor(sensor_type_t type)
 
                 new_sensor = (sensor_t *)new;
                 new_sensor->ops.connect_nerve = _sensor_connect_nerve;
+                new_sensor->ops.feel = _sensor_feel;
                 new_sensor->child = create_nerve();
                 if (!new_sensor->child)
                 {
