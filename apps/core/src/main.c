@@ -2,7 +2,6 @@
 #include "log.h"
 #include "core.h"
 #include "sensor.h"
-
 #include <stdio.h>
 #include <string.h>
 
@@ -107,8 +106,17 @@ int main(int argc, char** argv)
 
     print_neuron(new_psedounipolar);
 
-    create_sensor();
-
+    sensor_t *sensor = create_sensor(SENSOR_TOUCH);
+    if (sensor)
+    {
+        LOGI("Create sensor successfully\n");
+        printf("sensor type:%d\n", sensor->type);
+        if (!sensor->child) LOGW("sensor child is NULL\n");
+        if (!i) LOGW("i is NULL\n");
+        sensor->ops.connect_nerve(sensor, i);
+        print_neuron(new_psedounipolar);
+    }
+    
     destory_nerve(&a);
     destory_nerve(&b);
     destory_nerve(&c);

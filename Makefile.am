@@ -1,10 +1,9 @@
-SUBDIRS =   libs/lib_a/src\
-            libs/lib_b/src\
-            libs/lib_c/src\
-            apps/app1\
+SUBDIRS =   apps/app1\
             apps/app2\
             apps/core\
-            apps/template
+            apps/template\
+            libs/kalman/lib\
+            libs/kalman/test
 
 # automake need known where it is
 
