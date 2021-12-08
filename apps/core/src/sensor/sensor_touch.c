@@ -6,10 +6,16 @@
 
 typedef struct sensor_touch_t sensor_touch_t;
 
+typedef struct 
+{
+    char data;
+}sensor_touch_data_t;
+
 typedef struct sensor_touch_ops_t
 {
     int (*init)(sensor_touch_t *sensor);
     int (*deinit)(sensor_touch_t *sensor);
+    nerve_t *(*transport)(nerve_t *node, void *data, size_t data_len);
 }sensor_touch_ops_t;
 
 struct sensor_touch_t
@@ -30,9 +36,18 @@ static int _public_connect(sensor_t *me, nerve_t *child)
     return 0;
 }
 
-static int _public_feel(sensor_t *me, ...)
+static int _public_feel(sensor_t *me, uint8_t *data, size_t data_len)
 {
+    sensor_touch_t *st = (sensor_touch_t *)me;
+    if (!st)    return -1;
     LOGI("data\n");
+    
+    nerve_t* top = st->ops.transport(st->child, data, data_len);
+    if (top)
+    {
+        if (top->name)
+            printf("%s\n", top->name);
+    }
     return 0;
 }
 
@@ -45,9 +60,6 @@ static int _private_init(sensor_touch_t *me)
     me->ext.ops.connect_nerve = _public_connect;
     me->ext.ops.feel = _public_feel;
 
-    if (me->ext.ops.feel)   me->ext.ops.feel(me);
-    sensor_t *ss = (sensor_t *)me;
-    ss->ops.feel(ss);
     return 0;
 }
 
@@ -57,6 +69,18 @@ static int _private_deinit(sensor_touch_t *me)
     return 0;
 }
 
+static nerve_t *_private_transport(nerve_t *node, void *data, size_t data_len)
+{
+    nerve_t *top = node;
+    while (top->father)
+    {
+        top = top->father;
+        if (top->ops.recv_handle)
+            top->ops.recv_handle(top, data, data_len);
+    };
+    return top;
+}
+
 sensor_t *sensor_touch_create(void)
 {
     sensor_touch_t *new = (sensor_touch_t *)calloc(1, sizeof(sensor_touch_t));
@@ -64,6 +88,7 @@ sensor_t *sensor_touch_create(void)
 
     new->ops.init = _private_init;
     new->ops.deinit = _private_deinit;
+    new->ops.transport = _private_transport;
     new->child = create_nerve();
     if (!new->child)
     {

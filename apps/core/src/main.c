@@ -113,7 +113,7 @@ int main(int argc, char** argv)
         LOGI("Create sensor successfully\n");
         sensor->ops.connect_nerve(sensor, i);
         print_neuron(new_psedounipolar);
-        sensor->ops.feel(sensor);
+        sensor->ops.feel(sensor, "hello", sizeof("hello"));
     }
     else
     {
@@ -129,8 +129,6 @@ int main(int argc, char** argv)
     neuron_destory(&new_psedounipolar);
     neuron_destory(&neuron_bipolar);
     neuron_destory(&neuron_multipolar);
-
-
 
     return 0;
 }

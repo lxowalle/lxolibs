@@ -1,8 +1,11 @@
 #ifndef __CORE_H
 #define __CORE_H
 
-typedef struct neuron neuron_t;
+#include <stdint.h>
+#include <stdlib.h>
 
+typedef struct neuron neuron_t;
+typedef struct nerve nerve_t;
 /**
  * @brief 
  */
@@ -14,16 +17,28 @@ typedef enum nerve_type
 }nerve_type_t;
 
 /**
+ * @brief 
+ */
+typedef struct
+{
+    int (*recv)(nerve_t *nerve, uint8_t *data, size_t data_len);
+    int (*send)(nerve_t *nerve, uint8_t *data, size_t data_len);
+    int (*recv_handle)(nerve_t *nerve, uint8_t *data, size_t data_len);
+    int (*send_handle)(nerve_t *nerve, uint8_t *data, size_t data_len);
+}nerve_ops_t;
+
+/**
  * @brief nerve
  * 
  */
-typedef struct nerve
+struct nerve
 {
     nerve_type_t type;
     struct nerve *father, *zero, *one;
+    nerve_ops_t ops;
     char name[15];
     void *param;
-}nerve_t;
+};
 
 /**
  * @brief 
