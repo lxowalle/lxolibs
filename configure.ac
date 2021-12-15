@@ -28,5 +28,6 @@ AC_CONFIG_FILES([Makefile
                  libs/kalman/test/Makefile
                  libs/lib_a/src/Makefile
                  libs/lib_b/src/Makefile
-                 libs/lib_c/src/Makefile])
+                 libs/lib_c/src/Makefile
+                 libs/liblinuxapi/src/Makefile])
 AC_OUTPUT

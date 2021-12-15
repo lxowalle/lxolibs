@@ -130,5 +130,11 @@ int main(int argc, char** argv)
     neuron_destory(&neuron_bipolar);
     neuron_destory(&neuron_multipolar);
 
+
+
+    /** 日常测试C代码使用 */
+    extern int normal_test(void);
+    normal_test();
+
     return 0;
 }

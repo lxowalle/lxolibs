@@ -3,7 +3,8 @@ SUBDIRS =   apps/app1\
             apps/core\
             apps/template\
             libs/kalman/lib\
-            libs/kalman/test
+            libs/kalman/test\
+            libs/liblinuxapi/src
 
 # automake need known where it is
 
