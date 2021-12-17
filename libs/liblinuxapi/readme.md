@@ -705,6 +705,132 @@ void test(void)
 }
 ```
 
+**创建、删除目录**
+
+使用mkdir、mkdirat创建目录，使用rmdir删除空目录
+使用opendir、fdopendir打开目录
+使用readdir读取目录
+使用closedir关闭目录
+使用rewinddir、seekdir、telldir操作目录指针位置
+
+```c
+#include <sys/types.h>
+#include <dirent.h>
+
+void test(void)
+{
+    char *dir1 = "file1_dir";
+    char *file1 = "file1";
+
+    if (mkdir(dir1, 0777) < 0)
+        fprintf(stderr, "Mkdir error:%s\n", strerror(errno));
+    
+    /* 打开目录 */
+    DIR *open_dir = NULL;
+    struct dirent *dirp;
+    open_dir = opendir(dir1);
+    if (open_dir)
+    {
+        /* 查询目录 */
+        rewinddir(open_dir);        // 目录指针恢复到起始位置
+        seekdir(open_dir, 5830436974003520366);      // 修改目录指针
+        while ((dirp = readdir(open_dir)) != NULL)
+        if (dirp)
+        {
+            printf("目录指针:%ld\t", telldir(open_dir));
+            printf("inode:%ld\t", dirp->d_ino);
+            printf("名字:%s\t", dirp->d_name);
+            printf("偏移:%d\t", dirp->d_reclen);
+            printf("记录长度:%d\t", dirp->d_reclen);
+            printf("类型:");
+            switch (dirp->d_type)
+            {
+                case DT_BLK:printf("block dev\n");break;
+                case DT_CHR:printf("character dev\n");break;
+                case DT_DIR:printf("directory\n");break;
+                case DT_FIFO:printf("pipe(fifo)\n");break;
+                case DT_LNK:printf("symlink\n");break;
+                case DT_REG:printf("regular file\n");break;
+                case DT_SOCK:printf("socket\n");break;
+                case DT_UNKNOWN:printf("unknown\n");break;
+                default:printf("type is unknown\n");break;
+            }
+        }
+        /* 关闭目录 */
+        if (closedir(open_dir) < 0)
+            fprintf(stderr, "Closedir error:%s\n", strerror(errno));
+    }
+
+    if (creat(file1, 0777) < 0)
+        fprintf(stderr, "Creat error:%s\n", strerror(errno));
+
+    if (rmdir(dir1) < 0)
+        fprintf(stderr, "Rmdir error:%s\n", strerror(errno));
+        
+    if (!access(file1, F_OK))
+    {
+        if (remove(file1) < 0)
+            fprintf(stderr, "Remove error:%s\n", strerror(errno));
+    }
+
+    if (!access(dir1, F_OK))
+    {
+        if (remove(dir1) < 0)
+            fprintf(stderr, "Remove error:%s\n", strerror(errno));
+    }
+}
+```
+
+**更改/设置当前工作目录**
+
+使用fchdir、chdir设置当前工作目录，使用getcwd获取当前工作目录
+
+```c
+#include <unistd.h>
+
+void test(void)
+{
+    if (chdir("/tmp") < 0)
+        fprintf(stderr, "Chdir error:%s\n", strerror(errno));
+    
+    char buf[200];
+    if (getcwd(buf, sizeof(buf)))
+    {
+        printf("getcwd:%s\n", buf);
+    }
+}
+```
+
+**获取主次设备号**
+
+```c
+#include <sys/stat.h>
+#include <sys/sysmacros.h>
+void test(void)
+{
+    char *dir = "file";
+    if (creat(dir, 0777) < 0)
+        fprintf(stderr, "Creat error:%s\n", strerror(errno));
+
+    struct stat buf;
+    if (lstat(dir, &buf) < 0)
+        fprintf(stderr, "Lstat error:%s\n", strerror(errno));
+
+    /* 打印主次设备号 */
+    printf("dev = %d/%d\n", major(buf.st_dev), minor(buf.st_dev));
+
+    /* 打印字符/块设备实际的主/次设备号 */
+    if (S_ISCHR(buf.st_mode) || S_ISBLK(buf.st_mode))
+    {
+        printf("%s rdev = %d/%d\n", 
+        S_ISCHR(buf.st_mode) ? "character" : "block", 
+        major(buf.st_rdev), 
+        minor(buf.st_rdev));
+    }
+    
+    remove(dir);
+}
+```
 #### 修改运行环境路径
 
 ```c
