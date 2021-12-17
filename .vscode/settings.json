@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "cstdlib": "c",
-        "ncurses.h": "c"
+        "ncurses.h": "c",
+        "stat.h": "c"
     }
 }
