@@ -831,6 +831,176 @@ void test(void)
     remove(dir);
 }
 ```
+
+## 系统数据文件和信息
+
+Linux运行过程会伴随大量与系统有关的数据文件
+
+**口令文件**
+
+由于历史的原因，Linux口令文件是/etc/passwd
+
+```c
+/* A record in the user database.  */
+struct passwd
+{
+  char *pw_name;		/* Username.  */
+  char *pw_passwd;		/* Hashed passphrase, if shadow database
+                                   not in use (see shadow.h).  */
+  __uid_t pw_uid;		/* User ID.  */
+  __gid_t pw_gid;		/* Group ID.  */
+  char *pw_gecos;		/* Real name.  */
+  char *pw_dir;			/* Home directory.  */
+  char *pw_shell;		/* Shell program.  */
+};
+```
+
+1. 如果想要阻止用户登录，可以将Shell程序设置为/dev/null、/bin/false(返回失败)或/bin/true(返回成功)
+2. nobody用户id为65534，组id为65534，不提供任何权限，目的是让任何人都可以登录到系统。
+
+**阴影口令文件**
+
+阴影口令文件是单向加密算法处理过的用户口令副本，文件路径为/etc/shadow。为了防止外部用明文口令生成加密口令，再不断与其用户的加密口令对比，最终比对成功后得到原始口令，阴影口令一般只能由root用户访问，也因此普通口令文件/etc/passwd可以由各个用户读取。
+
+```c
+/* A record in the shadow database.  */
+struct spwd
+  {
+    char *sp_namp;		/* Login name.  */
+    char *sp_pwdp;		/* Hashed passphrase.  */
+    long int sp_lstchg;		/* Date of last change.  */
+    long int sp_min;		/* Minimum number of days between changes.  */
+    long int sp_max;		/* Maximum number of days between changes.  */
+    long int sp_warn;		/* Number of days to warn user to change
+				   the password.  */
+    long int sp_inact;		/* Number of days the account may be
+				   inactive.  */
+    long int sp_expire;		/* Number of days since 1970-01-01 until
+				   account expires.  */
+    unsigned long int sp_flag;	/* Reserved.  */
+  };
+```
+
+**组文件**
+
+组文件/etc/group
+
+```c
+/* The group structure.	 */
+struct group
+  {
+    char *gr_name;		/* Group name.	*/
+    char *gr_passwd;	/* Password.	*/
+    __gid_t gr_gid;		/* Group ID.	*/
+    char **gr_mem;		/* Member list.	指向各用户指针的数组*/
+  };
+```
+**附属组id**
+
+每个用户除了拥有一个组以外，也可以拥有多个附属组。这是为了解决一个用户参与多个项目时，需要同时属于多个组。
+
+**其他数据文件**
+
+`/etc/nsswwitch.conf`，系统可以使用网络信息服务(NIS)来管理用户和组的数据库。系统通过配置文件/etc/nsswitch.conf来管理每一类信息
+
+`/etc/protocols`,记录各网络服务器提供服务的数据文件
+
+`/etc/protocols`,记录协议信息的数据文件
+
+`/etc/networks`，记录网络信息的数据文件
+
+**登录账户记录**
+
+有两个文件来记录账户信息：
+1. `/var/run/utmp`:记录当前登录到系统的用户
+2. `/var/log/wtmp`:记录用户登录的注销的日志
+```c
+/* The structure describing an entry in the user accounting database.  */
+struct utmp
+{
+  short int ut_type;		/* Type of login.  */
+  pid_t ut_pid;			/* Process ID of login process.  */
+  char ut_line[UT_LINESIZE];	/* Devicename.  */
+  char ut_id[4];		/* Inittab ID.  */
+  char ut_user[UT_NAMESIZE];	/* Username.  */
+  char ut_host[UT_HOSTSIZE];	/* Hostname for remote login.  */
+  struct exit_status ut_exit;	/* Exit status of a process marked
+				   as DEAD_PROCESS.  */
+/* The ut_session and ut_tv fields must be the same size when compiled
+   32- and 64-bit.  This allows data files and shared memory to be
+   shared between 32- and 64-bit applications.  */
+#ifdef __WORDSIZE_TIME64_COMPAT32
+  int32_t ut_session;		/* Session ID, used for windowing.  */
+  struct
+  {
+    int32_t tv_sec;		/* Seconds.  */
+    int32_t tv_usec;		/* Microseconds.  */
+  } ut_tv;			/* Time entry was made.  */
+#else
+  long int ut_session;		/* Session ID, used for windowing.  */
+  struct timeval ut_tv;		/* Time entry was made.  */
+#endif
+
+  int32_t ut_addr_v6[4];	/* Internet address of remote host.  */
+  char __glibc_reserved[20];		/* Reserved for future use.  */
+};
+```
+
+**系统标识**
+
+一般情况使用uname来获取主机和操作系统的有关信息
+
+struct utsname {
+	char sysname[65];
+	char nodename[65];
+	char release[65];
+	char version[65];
+	char machine[65];
+#ifdef _GNU_SOURCE
+	char domainname[65];
+#else
+	char __domainname[65];
+#endif
+};
+
+**时间和日期**
+
+有一系列的函数来获取和设置时间：
+
+```c
+time_t time(time_t *calptr);
+
+/**
+ * CLOCK_REALTIME   实时系统时间
+ * CLOCK_MONOTONIC  不带负跳数的实时系统时间
+ * CLOCK_PROCESS_CPUTIME_ID 调用进程的CPU时间
+ * CLOCK_THREAD_CPUTIME_ID  调用线程的CPU时间
+*/
+int clock_gettime(clockid_t clock_id, struct timespec *tsp);
+int clock_getres(clockid_t clock_id, struct timespec *tsp);
+int clock_settime(clockid_t clock_id, const struct timespec *tsp);
+
+/**
+ * 第二个参数只能是NULL
+*/
+int gettimeofday(struct timeval *restrict tp, void *restrict tzp);
+
+/* 时间格式转换 */
+struct tm *gmtime(const time_t *calptr);
+struct tm *localtime(const time_t *calptr);
+time_t mktime(struct tm *tmptr);
+
+/* 时间格式打印 */
+size_t strftime(char *dst, size_t dst_size, const char *fmt, const struct tm *tm);
+size_t strftime_l (char *__restrict __s, size_t __maxsize,
+			  const char *__restrict __format,
+			  const struct tm *__restrict __tp,
+			  __locale_t __loc);
+char *strptime (const char *__restrict __s,const char *__restrict __fmt, struct tm *__tp);
+```
+
+## 其他
+
 #### 修改运行环境路径
 
 ```c
