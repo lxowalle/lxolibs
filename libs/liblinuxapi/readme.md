@@ -999,6 +999,734 @@ size_t strftime_l (char *__restrict __s, size_t __maxsize,
 char *strptime (const char *__restrict __s,const char *__restrict __fmt, struct tm *__tp);
 ```
 
+## 进程控制
+
+
+**命令行参数**
+
+ISO C和POSIX.1要求argv[argc]是一个空指针，因此循环处理参数处理可以有两种写法：
+
+```c
+int main(int argc, char *argv[])
+{
+    /* 方法1 */
+    for (int i = 0; i < argc ;i ++)
+    {
+        printf("par[%d]:%s\n", i, argv[i]);
+    }
+
+    /* 方法2 */
+    for (int i = 0; argv[i] != NULL; i ++)
+    {
+        printf("par[%d]:%s\n", i, argv[i]);
+    }
+    return 0;
+}
+```
+
+**C程序的存储控件布局**
+
+```c
+/**
+ *  ___________________
+ * |___________________| 命令行参数、环境变量
+ * |                   | 栈，向下增长，栈底地址0xC0000000
+ * |_ _ _ _ _ _ _ _ _ _|
+ * |                   |
+ * |                   |
+ * |                   |
+ * |_ _ _ _ _ _ _ _ _ _|
+ * |___________________| 堆，向上增长
+ * |                   |
+ * |                   | 未初始化数据(bss)
+ * |___________________|
+ * |                   |
+ * |                   | 初始化数据(data)
+ * |___________________|
+ * |                   |
+ * |                   | 
+ * |___________________| 代码(text),起始地址0x08048000
+*/
+```
+
+程序加载到进程中一般有text段、data段和bss段，堆段和栈段由程序分配，其中text段和data段会被放在磁盘程序文件中，而bss段没有，因为内核需要在启动程序时将它们都设置为0。此外程序还有其他例如符号表的段、调试信息的段并不被加载到内存中。
+
+使用size查看程序的text段、data段、bss段的大小。
+
+```shell
+## 第4列、第5列分别以十进制和十六进制标识3段总长度
+lxo@ubuntu:~/lxolibs$ size /bin/ls
+   text    data     bss     dec     hex filename
+ 128069    4688    4824  137581   2196d /bin/ls
+```
+
+**存储空间分配**
+
+ISO C说明的3个用来动态分配存储空间的函数，malloc,calloc和realloc。用这3个函数可以动态分配堆内存的空间。
+
+1. malloc，分配制定字节数的空间，初始值不确定
+2. calloc，为指定数量指定长度的对象分配存储空间，初始值为0
+3. realloc，增加或减少已分配的空间。增加空间时，指针可能会修改，初始值不确定。
+4. free，释放分配的空间
+
+**环境表/环境变量**
+
+每个程序都会收到一张环境表，通过全局变量environ获取，这是一个字符串数组，数组末尾为NULL。
+
+```c
+int main(int argc, char *argv[])
+{
+    /* 读环境变量表 */
+    extern char **environ;
+    for (int i = 0; environ[i] != NULL; i ++)
+    {
+        printf("%d) %s\n", i, argv[i]);
+    }
+
+    /* 读/写环境变量 */
+    putenv("USER_TEST=12312312313");
+    printf("USER_TEST:%s\n", getenv("USER_TEST"));        
+    putenv("USER_TEST");                          // 删除
+    printf("USER_TEST:%s\n", getenv("USER_TEST"));  
+
+    /* 读/写环境变量2 */   
+    setenv("USER_TEST2", "123", 0);     /* 最后一个参数用来选择是否覆盖原参数 */
+    printf("USER_TEST2:%s\n", getenv("USER_TEST2"));     
+    unsetenv("USER_TEST2");
+    printf("USER_TEST2:%s\n", getenv("USER_TEST2")); 
+    return 0;
+}
+```
+
+关于putenv和setenv的区别，putenv是传入环境变量的地址，一般传入全局变量地址，因此不需要分配内存。而setenv需要分配内存，传入新内存的地址。
+
+**函数setjmp和函数longjmp实现跨函数跳转**
+
+调用setjmp保存当前栈环境，调用longjmp跳转到保存的栈环境，此时setjmp返回非0。注意全局变量、静态变量和易失变量(volatile修饰)不会因为跳转而改变值。
+
+```c
+#include <string.h>
+#include <setjmp.h>
+
+jmp_buf jmpbuffer;
+
+void long_jmp(void)
+{
+    longjmp(jmpbuffer, 1);
+}
+
+int main(int argc, char *argv[])
+{
+    char line[10];
+
+    if (setjmp(jmpbuffer) != 0)
+    {
+        printf("jmp by longjmp()!\n");
+    }
+        
+    while (fgets(line, sizeof(line), stdin) != NULL)
+        long_jmp();
+
+    return 0;
+}
+```
+
+**函数getrlimit和函数setrlimit修改和查看进程资源**
+
+进程有多个资源，每个资源都有两个限制，软限制和硬限制。通过getrlimit和setrlimit可以查看和修改这些限制。更改资源限制时需要遵循3条规则：
+1. 任何进程都可以将软限制修改为小于或等于其硬限制的值
+2. 任何进程都可以降低硬限制值，但必须大于或等于软限制的值。且这种改变对普通用户是不可逆的
+3. 超级用户进程可以提高硬限制值
+
+```c
+#include <errno.h>
+#include <sys/resource.h>
+#define doit(str, name) pr_limits(str,#name, name);
+
+static void pr_limits(char *str, char *name, int resource);
+
+int main(int argc, char *argv[])
+{
+    doit("进程总的可用内存空间", RLIMIT_AS);
+    doit("栈的最大字节长度", RLIMIT_STACK);
+    doit("data段、bss段和堆总长度", RLIMIT_DATA);
+    doit("CORE文件最大字节数", RLIMIT_CORE);
+    doit("CPU时间的最大量值(秒)，超过限制会向进程发送SIGXCPU信号", RLIMIT_CPU);
+    doit("可创建文件的最大字节长度。超过限制会像进程发送SIGXFSZ信号", RLIMIT_FSIZE);
+    doit("进程使用mlock能过锁定在存储空间中的最大字节长度", RLIMIT_MEMLOCK);
+    doit("进程为POSIX消息队列可分配的最大存储字节数", RLIMIT_MSGQUEUE);
+    doit("nice值可设置的最大限制(影响优先限级)", RLIMIT_NICE);
+    doit("进程可以打开的文件数", RLIMIT_NOFILE);
+    doit("进程实际用户ID可拥有的最大子进程数", RLIMIT_NPROC);
+    // doit("用户可同时打开的伪终端的数量", RLIMIT_NPTS);
+    doit("最大驻内存集字节长度", RLIMIT_RSS);
+    // doit("任意给定时间，一个用户可以占用套接字缓冲区的最大长度(字节)", RLIMIT_SBSIZE);
+    doit("进程可排队的信号最大数量", RLIMIT_SIGPENDING);
+    // doit("用户可消耗的交换空间的最大字节数", RLIMIT_SWAP);
+
+    return 0;
+}
+
+static void pr_limits(char *str, char *name, int resource)
+{
+    struct rlimit limit = {0};
+    unsigned long long lim;
+
+    if (getrlimit(resource, &limit) < 0)
+        fprintf(stderr, "Getrlimit error:%s\n", strerror(errno));
+    printf("%s\t", name);
+
+    printf("curr:");
+    if (limit.rlim_cur == RLIM_INFINITY) {
+        printf("(无限)\t");
+    }
+    else {
+        lim = limit.rlim_cur;
+        printf("%d\t", lim);
+    }
+
+    printf("max:");
+    if (limit.rlim_max == RLIM_INFINITY) {
+        printf("(无限)\t");
+    }
+    else {
+        lim = limit.rlim_max;
+        printf("%d\t", lim);
+    } 
+    printf("%s\n", str);
+}
+```
+
+## 进程控制
+
+**进程标识**
+
+已被启动的进程拥有唯一的ID，这些ID可以在进程退出后被复用，一般使用延时复用算法。
+ID=0的进程是调度进程，又被称为交换进程。该进程是内核的一部分，也被称为系统进程。
+ID=1的进程是init进程，在系统自举结束时由内核调用，该进程的程序文件保存在/etc/init或/sbin/init。init进程会读取与系统有关的初始化文件(/etc/rc*文件，/etc/inittab文件，以及存在/etc/init.d目录的文件)。init进程是用户态下的以超级用户特权运行的第一个进程，该进程不会终止。
+ID=2的进程是页守护进程，负责支持虚拟存储系统的分页操作，运行在内核态下。
+
+获取进程的标识：
+```c
+#include <unistd.h>
+int main(int argc, char *argv[])
+{
+    printf("进程ID:%d\n", getpid());
+    printf("进程的父进程ID:%d\n", getppid());
+    printf("进程的实际用户ID:%d\n", getuid());
+    printf("进程的有效用户ID:%d\n", geteuid());
+    printf("进程的实际组ID:%d\n", getgid());
+    printf("进程的有效组ID:%d\n", geteuid());
+    return 0;
+}
+
+```
+
+**创建子进程**
+
+使用fork()创建进程，fork()调用后会向子进程返回0，向父进程返回子进程的pid。此外fork执行后子进程是父进程的副本，它们共享代码段，但不共享进程数据空间、堆和栈(这部分页会被标记为只读)。通过硬件支持而出现的写时复用技术来隔离他们的数据:当子进程或父进程尝试写数据时，会触发硬件页错误，错误处理程序会复制该页并赋予读写权限，并且程序计数器会返回到上一个语句并再次尝试写数据。至此，子进程的数据和父进程的数据被分隔开。
+
+```c
+#include <errno.h>
+#include <unistd.h>
+int main(int argc, char *argv[])
+{
+    pid_t pid;
+    pid = fork();
+    if (pid < 0)
+        fprintf(stderr, "fork error:%s\n", strerror(errno));
+    else if (pid == 0)
+    {
+        /* Child process */
+        printf("Child pid:%d\n", getpid());
+    }
+    else if (pid > 0)
+    {
+        printf("Father pid:%d  Child pid:%d\n", getpid(), pid);
+    }
+
+    /* 此时的代码段被共用 */
+    printf("hello world!\n");
+
+    return 0;
+}
+```
+
+fork后文件缓冲区也会被复制
+fork后打开的文件描述符会被复制，为了避免影响，父进程和子进程都需要关闭不使用的文件描述符，用来防止干扰对方。
+fork还有其他属性会被继承：
+- 实际用户ID、实际组ID、有效用户ID、有效组ID
+- 附属组ID
+- 进程组ID
+- 会话ID
+- 控制终端
+- 设置用户ID标志和设置组ID标志
+- 当前工作目录
+- 根目录
+- 文件模式创建屏蔽字
+- 信号屏蔽和安排
+- 对任意打开文件描述符的执行时关闭标志
+- 环境
+- 链接的共享存储段
+- 存储映像
+- 资源限制
+
+父进程和子进程的区别：
+- fork返回值不同
+- 进程ID不同
+- 子进程的tms_utime、tms_stime、tms_cutime和tms_ustime的值设为0
+- 子进程不继承父进程设置的文件锁
+- 子进程的未处理闹钟被清除
+- 子进程的未处理信号集设置为空集
+
+**退出子进程**
+
+子进程退出后必须回收其资源，否则会成为僵死进程。
+
+如果父进程被杀死，子进程的父进程pid会设置为1，1号进程会在子进程退出时回收资源
+如果父进程存在，子进程退出后没有调用wait或waitpid回收子进程，那么子进程会变成僵死进程
+
+进程终止的8种方式:
+
+1. main函数返回
+2. (由ISO C说明)调用exit
+3. 调用_Exit(由ISO C说明)或_exit(由POSIX.1说明)
+4. 最后一个线程从启动例程返回
+5. 最后一个线程调用pthread_exit
+6. (异常终止)调用abort
+7. (异常终止)接收到信号
+8. (异常终止)最后一个线程对取消请求做响应
+
+进程正常或异常终止后，会向父进程发送SIGCHLD信号
+exit()函数会调用fclose关闭所有打开的流，缓冲的所有数据都会被冲洗，写到文件上。
+main函数调用ruturn(0)和exit(0)是等价的，如果main函数没有显示返回值，那么终止状态就是未确定的。
+
+使用atexit设置终止处理程序:
+
+ISO C规定一个进程登记最多32个函数，这些函数由exit自动调用，调用的顺序与登记的顺序相反，调用atexit函数登记。POSIX.1规定如果调用了exec函数族的函数，则会清除登记的退出处理函数。
+
+```c
+#include <stdlib.h>
+void user_exit_handle111111(void)
+{
+    printf("111111111111\n", __LINE__);
+}
+
+void user_exit_handle222222(void)
+{
+    printf("222222222222\n", __LINE__);
+}
+
+void user_exit_handle333333(void)
+{
+    printf("333333333333\n", __LINE__);
+}
+
+int main(void)
+{
+    atexit(user_exit_handle111111);
+    atexit(user_exit_handle222222);
+    atexit(user_exit_handle333333);
+    return 0;
+}
+```
+
+wait和waitpid等待子进程退出
+
+调用wait或waitpid会有3种情况：
+1. 如果子进程都在运行中，则阻塞
+2. 如果一个子进程已终止，并正等待父进程获取其终止状态，则取得该子进程终止状态后立即返回
+3. 如果父进程没有任何子进程，则返回错误
+
+对于子进程返回状态，可以用4个宏来获取子进程返回的原因：
+```c
+void pr_exit(int status)
+{
+    printf("Check child process exit status: ");
+    if (WIFEXITED(status))
+    {
+        printf("正常终止，exit status:%d\n", WEXITSTATUS(status));
+    }
+    else if (WIFSIGNALED(status))
+    {
+        printf("异常终止，exit status:%d%s\n",WTERMSIG(status),
+                WCOREDUMP(status) ? "(core file generated)" : "");
+    }
+    else if (WIFSTOPPED(status))
+    {
+        printf("子进程暂停，signal number:%d\n", WSTOPSIG(status));
+    }
+
+#if 0
+    else if (WIFCONTINUED(status))
+    {
+        printf("子进程从暂停恢复(仅用于waitpid)\n");
+    }
+#endif
+}
+```
+
+wait的使用示例：
+
+等待任意一个进程退出后，wait就会退出阻塞。
+
+```c
+int main(int argc, char *argv[])
+{
+    pid_t pid;
+    int status;
+
+    /* 进程正常退出测试 */
+    if ((pid = fork()) < 0)
+        fprintf(stderr, "fork error:%s\n", strerror(errno));
+    else if (pid == 0)
+        exit(7);
+
+    if (wait(&status) != pid)
+        fprintf(stderr, "wait error:%s\n", strerror(errno));
+    pr_exit(status);
+
+    /* 进程异常退出测试 */
+    if ((pid = fork()) < 0)
+        fprintf(stderr, "fork error:%s\n", strerror(errno));
+    else if (pid == 0)
+        abort();
+
+    if (wait(&status) != pid)
+        fprintf(stderr, "wait error:%s\n", strerror(errno));
+    pr_exit(status);
+    
+    /* 进程异常退出测试 */
+    if ((pid = fork()) < 0)
+        fprintf(stderr, "fork error:%s\n", strerror(errno));
+    else if (pid == 0)
+        status /= 0;
+
+    if (wait(&status) != pid)
+        fprintf(stderr, "wait error:%s\n", strerror(errno));
+    pr_exit(status);
+
+    exit(0);
+}
+```
+
+waitpid的使用示例：
+
+waitpid有两个参数来控制其功能，pid参数来选择要等待的子进程pid的方式，option参数进一步控制一些特殊的等待方式。
+
+```c
+#include <sys/wait.h>
+
+void pr_exit(int status)
+{
+    printf("Get process exit status: ");
+    if (WIFEXITED(status))
+    {
+        printf("正常终止，exit status:%d\n", WEXITSTATUS(status));
+    }
+    else if (WIFSIGNALED(status))
+    {
+        printf("异常终止，exit status:%d%s\n",WTERMSIG(status),
+                WCOREDUMP(status) ? "(core file generated)" : "");
+    }
+    else if (WIFSTOPPED(status))
+    {
+        printf("子进程暂停，signal number:%d\n", WSTOPSIG(status));
+    }
+
+#if 0
+    else if (WIFCONTINUED(status))
+    {
+        printf("子进程从暂停恢复(仅用于waitpid)\n");
+    }
+#endif
+}
+
+int main(int argc, char *argv[])
+{
+    pid_t pid;
+    int status = 0;
+
+    /* 进程正常退出测试 */
+    if ((pid = fork()) < 0)
+        fprintf(stderr, "fork error:%s\n", strerror(errno));
+    else if (pid == 0)
+    {
+        if ((pid = fork()) < 0)
+            fprintf(stderr, "fork error:%s\n", strerror(errno));
+        else if (pid > 0)
+            exit(0);
+
+        sleep(2);
+        printf("Sencond child , parent pid = %ld\n", getppid());
+        exit(0);
+    }
+
+    /**
+     * @brief 等待子进程退出
+     * 
+     * @param [in]  pid
+     *              pid == -1, 等待任意子进程，此时wait与waitpid等效
+     *              pid > 0, 等待进程id=pid的子进程
+     *              pid == 0, 等待组id=pid的任意子进程
+     *              pid < -1, 等待组id等于pid绝对值的任意子进程
+     * @param [out] status  进程退出状态  
+     * @param [in]  option  
+     *              WCONTINUED  如果子进程停止后已经继续，但状态未报告，则返回其状态（停止后继续？？）
+     *              WNOHANG     如果子进程不是立即可用，则waitpid不阻塞并且返回0
+     *              WUNTRACED   如果子进程已经停止但没有报告，则返回其状态。
+    */
+    if (waitpid(pid, &status, 0) != pid)
+        fprintf(stderr, "waitpid error:%s\n", strerror(errno));
+
+    exit(0);
+}
+```
+
+使用waitid等待进程退出
+
+```c
+    /**
+     * @brief 等待子进程退出
+     * 
+     * @param [in]  idtype  
+     *              P_PID   等待特定进程，id包含要等待子进程的进程id
+     *              P_PGID  等待特定进程组中的任意一个子进程，id包含要等待子进程的进程组id
+     *              P_ALL   等待任意子进程，id参数无效
+     * @param [in]  id      进程id或组进程id
+     * @param [in]  infop   进程状态的详细参数
+     * @param [in]  option  
+     *              WCONTINUED  如果一个进程曾今被停止，此后又被继续，但其状态为报告，则返回其状态
+     *              WEXITED     等待已退出的进程
+     *              WSTOPPED    如果子进程已经停止但是没有报告，则返回其状态
+     *              (上面三个参数之一必须被指定)
+     *              WNOHANG     如果子进程不是立即可用，则不阻塞，立即返回
+     *              WNOWAIT     等待子进程，但不破坏子进程的退出状态，该子进程可以被wait，waitid，waitpid调用取得
+     * @return
+    */
+    int waitid (idtype_t __idtype, __id_t __id, siginfo_t *__infop, int __options);
+```
+
+wait3和wait4函数
+
+这两个函数同样是等待子进程退出，区别是多了一个参数来获取子进程使用的资源概况。
+
+**父/子进程竞争**
+
+父/子进程竞争关系也就是两个进程先后调用的关系，可以用一些宏来互相通知，同步执行。
+
+示例：（宏的写法以后补上）
+```c
+#include <errno.h>
+#include <unistd.h>
+
+int main(int argc, char *argv[])
+{
+    pid_t pid;
+    int status = 0;
+
+    if ((pid = fork()) < 0)
+        fprintf(stderr, "fork error:%s\n", strerror(errno));
+    else if (pid == 0)
+    {
+        WAIT_PARENT();
+        printf("Child id:%d\n", getpid());
+    }
+    else if (pid > 0)
+    {
+        printf("Parent id:%d\n", getpid());
+        TELL_CHILD(pid);
+    }
+
+
+    exit(0);
+}
+```
+
+**exec函数族**
+
+进程调用exec函数族后会加载程序的代码段、数据段、堆段、栈段，但不会新建一个进程。
+
+```c
+/**
+ * @brief exec函数族
+ * 下面的函数族只有execve是系统调用，其他都是库函数，最终会调用execve
+ * @param [in]  path或fd或file  
+ *              path 文件目录
+ *              fd  文件描述符
+ *              file  文件名
+ *                  1. 如果文件名包含"/"则视为目录
+ *                  2. 否则会在PATH环境变量中搜索可执行文件
+ *                  3. 如果不是可执行文件，则认为是一个shell脚本，尝试调用/bin/sh并将文件名作为shell的输入
+ * @param [in]  arg或argv    
+ *               arg和...组合用来传入单独的参数,注意最后一个参数必须为NULL
+ *               argv用来传入参数指针数组，以NULL结尾  
+ * @param [in]  envp
+ *               环境变量表，以NULL结尾 
+*/
+
+int execve (const char *__path, char *const __argv[],char *const __envp[]);
+int execv (const char *__path, char *const __argv[]);
+int execle (const char *__path, const char *__arg, ...);
+int execl (const char *__path, const char *__arg, ...);
+int execvp (const char *__file, char *const __argv[]);
+int execlp (const char *__file, const char *__arg, ...);
+int execvpe (const char *__file, char *const __argv[], char *const __envp[]);
+int fexecve (int __fd, char *const __argv[], char *const __envp[]);
+```
+
+**更改用户id和更改组id**
+
+关于3个用户id：实际用户id，有效用户id和保存设置用户id
+
+实际用户id：当前登录系统的用户id
+有效用户id：当前访问资源时用来决定权限的用户id，默认有效用户id与实际用户id相同，但在某些时候需要修改有效用户id来提高权限才能访问某些文件/或资源。
+保存的设置用户id：在目标文件的设置用户id位启动时会用到，当访问目标文件时，可以将有效用户id设置位与目标文件所属的用户id相同，这样就可以拥有权限访问目标文件。目标文件是可执行文件时，如果需要访问当前进程的数据，会将目标执行文件所在进程的有效用户id有修改为本地进程的有效用户id，操作结束时目标进程需要恢复原本的有效用户id，此时就依赖保存设置用户id来恢复。保存设置用户id是有效用户id的副本。
+
+通过setuid和setgid来设置实际用户id以及有效用户id和实际用户组id以及有效用户组id，目的是提高某些进程的权限，或者降低某些进程的权限。
+通过seteuid和setegid来设置有效用户id和有效用户组id
+通过setreuid交换用户id和有效用户id
+通过setregid交换用户组id和用户组有效id
+
+**解释器文件**
+
+解释器文件的通用格式:
+```shell
+#! pathname [optional-argument]
+```
+
+使用execl执行解释器文件
+
+```c
+int main(int argc, char *argv[])
+{
+    pid_t pid;
+    int status = 0;
+
+    if ((pid = fork()) < 0)
+        fprintf(stderr, "fork error:%s\n", strerror(errno));
+    else if (pid == 0)
+    {
+        printf("Child id:%d\n", getpid());
+        
+        /* 执行解释器文件,第一个参数是解释器文件路径，第二个参数是解释器文件名，第三、四个参数是传给解释器文件的可选参数 */
+        if (execl("./test_shell", "test_shell", "arg0", "arg1", NULL) < 0)
+            fprintf(stderr, "execl error:%s\n", strerror(errno));
+    }
+
+    wait(NULL);
+
+    exit(0);
+}
+```
+
+注意解释器是解释器文件使用`#!`指定文件，解释器和解释器文件是不同的文件。
+
+**system执行命令**
+
+C代码可以使用system来快速执行某些命令，system实现中调用了fork、exec和waitpid，因此有3种返回值：
+1. fork失败或waitpid返回除EINTR（阻塞引起的错误）之外的错误时，system返回-1，并设置errno来指示错误
+2. 执行exec失败，返回值同exit(127)
+3. 返回shell的终止状态
+
+**获取用户名**
+
+使用getlogin()获取当前登录的用户名
+
+```c
+int main(int argc, char *argv[])
+{
+    printf("user name:%s\n", getlogin());
+
+    exit(0);
+}
+```
+
+**进程调度**
+
+进程通过nice值作为进程调用的优先级，nice值越小优先级越高。
+
+设置/获取nice值的3个函数
+```c
+#include <unistd.h>
+int nice(int incr);
+
+#include <sys/sources.h>
+int getpriority(int which, id_t who);
+int setpriority(int which, id_t who, int value);
+```
+
+**进程时间**
+
+使用times来获取时间，通过比较前后时间来获取进程的运行时间
+
+```c
+struct tms
+  {
+    clock_t tms_utime;		/* User CPU time.  */
+    clock_t tms_stime;		/* System CPU time.  */
+
+    clock_t tms_cutime;		/* User CPU time of dead children.  */
+    clock_t tms_cstime;		/* System CPU time of dead children.  */
+  };
+```
+
+获取进程时间的代码例子
+
+```c
+#include <stdlib.h>
+#include <sys/times.h>
+
+static void pr_times(clock_t, struct tms *, struct tms *);
+static void do_cmd(char *);
+
+int main(int argc, char *argv[])
+{
+    setbuf(stdout, NULL);
+    printf("argc:%d\n", argc);
+    for (int i = 0; i < argc - 1; i ++)
+    {
+        do_cmd(argv[i]);
+    }
+    
+    exit(0);
+}
+
+static void do_cmd(char *cmd)
+{
+    struct tms tmsstart, tmsend;
+    clock_t start, end;
+    int status;
+
+    printf("\ncommand: %s\n", cmd);
+
+    if ((start = times(&tmsstart)) == -1)
+        fprintf(stderr, "times error:%s\n", strerror(errno));
+    
+    if ((status = system(cmd)) == -1)
+        fprintf(stderr, "system error:%s\n", strerror(errno));
+
+    if ((end = times(&tmsend)) == -1)
+        fprintf(stderr, "times error:%s\n", strerror(errno));
+
+    pr_times(end - start, &tmsstart, &tmsend);
+}
+
+static void pr_times(clock_t real, struct tms *tmsstart, struct tms *tmsend)
+{
+    static long clktck = 0;
+
+    if (clktck == 0)
+        if ((clktck = sysconf(_SC_CLK_TCK)) < 0)
+            fprintf(stderr, "sysconf error:%s\n", strerror(errno));
+        
+        printf(" Real time                          : %7.2f\n", real / (double) clktck);
+        printf(" User CPU time                      : %7.2f\n", (tmsend->tms_utime - tmsstart->tms_utime) / (double)clktck);
+        printf(" System CPU time                    : %7.2f\n", (tmsend->tms_stime - tmsstart->tms_stime) / (double)clktck);
+        printf(" User CPU time of dead children     : %7.2f\n", (tmsend->tms_cutime - tmsstart->tms_cutime) / (double)clktck);
+        printf(" System CPU time of dead children   : %7.2f\n", (tmsend->tms_cstime - tmsstart->tms_cstime) / (double)clktck);
+}
+```
 ## 其他
 
 #### 修改运行环境路径
@@ -1025,6 +1753,9 @@ void test(void)
     free(curr_work_dir2);
 }
 ```
+
+
+
 
 #### 终端输入/输出
 
