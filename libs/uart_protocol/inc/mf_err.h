@@ -10,6 +10,7 @@ typedef enum
     MF_ERR_NORMAL,
     MF_ERR_REDEFINE,
     MF_ERR_UNDEFINE,
+    MF_ERR_UNKNOW,
     MF_ERR_TODO
 }mf_err_t;
 

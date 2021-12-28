@@ -1,11 +1,5 @@
 #include "mf_uartp_bin.h"
 
-typedef struct
-{
-    uint8_t recv_buff[UARTP_FRAME_SIZE * UARTP_FRAME_BUFFNUM];
-    size_t recv_cnt;
-}uartp_private_t;
-
 /**
  * @brief Command list
  * @details Add command and cb here.the last one item must set cb to NULL
@@ -15,6 +9,71 @@ static mf_uartp_bin_item_t cmd_list[] =
 {
     {HEXCMD_INVALID,    NULL}                    // Must be exist
 };
+
+/**
+ * @brief Init uart device
+ * @return 
+*/
+static mf_err_t _uart_device_init(void)
+{
+    mf_err_t err = MF_OK;
+
+    // TODO
+    // ...
+
+    return err;
+}
+
+/**
+ * @brief Deinit uart device
+ * @return 
+*/
+static mf_err_t _uart_device_deinit(void)
+{
+    mf_err_t err = MF_OK;
+
+    // TODO
+    // ...
+
+    return err;
+}
+
+/**
+ * @brief Uart send data
+ * @return
+*/
+static int _uart_device_send(uint8_t *data, int len)
+{
+    int real_len = 0;
+
+    // TODO
+    // ...
+
+    return real_len;
+}
+
+/**
+ * @brief Uart recv data
+ * @return
+*/
+static int _uart_device_recv(uint8_t *data, int len)
+{
+    int real_len = 0;
+
+    // TODO
+    // ...
+
+    return real_len;
+}
+
+/**
+ * @brief Private data
+*/
+typedef struct
+{
+    uint8_t recv_buff[UARTP_FRAME_SIZE * UARTP_FRAME_BUFFNUM];
+    int recv_cnt;
+}uartp_private_t;
 
 /**
  * @brief Find cmd and exec cb
@@ -33,7 +92,7 @@ static mf_err_t _uartp_exec_cmd(mf_uartp_t *uartp, uartp_bin_cmd_t cmd)
 }
 
 /** 
- * @brief crc校验 
+ * @brief Check crc16
  */
 static uint16_t crc16_xmodem(const uint8_t *buffer, uint32_t buffer_length)
 {
@@ -63,13 +122,13 @@ static mf_err_t _receive_data_handler(mf_uartp_t *uartp)
 {
     mf_err_t err = MF_OK;
     uartp_private_t *private = (uartp_private_t *)uartp->private;
-    size_t *recv_cnt = &private->recv_cnt;
+    int *recv_cnt = &private->recv_cnt;
     uartp_bin_frame_t *recv_ptl = (uartp_bin_frame_t *)private->recv_buff;
     int len = 0;
 
     if (*recv_cnt < 2)
     {
-        err = uartp->ops.recv(uartp, &len); // TODO: 伪代码
+        err = uartp->ops.recv(uartp, recv_ptl + *recv_cnt, 2 - *recv_cnt, &len);
         if (err == MF_OK && len > 0)
         {
             *recv_cnt += len;
@@ -97,7 +156,7 @@ static mf_err_t _receive_data_handler(mf_uartp_t *uartp)
     }
     else if (*recv_cnt < 6)
     {
-        err = uartp->ops.recv(uartp, &len); // TODO: 伪代码
+        err = uartp->ops.recv(uartp, recv_ptl + *recv_cnt, 6 - *recv_cnt, &len);
         if (err == MF_OK && len > 0)
         {
             *recv_cnt += len;
@@ -111,7 +170,7 @@ static mf_err_t _receive_data_handler(mf_uartp_t *uartp)
     }
     else if (*recv_cnt < recv_ptl->len)
     {
-        err = uartp->ops.recv(uartp, &len); // TODO: 伪代码
+        err = uartp->ops.recv(uartp, recv_ptl + *recv_cnt, recv_ptl->len - *recv_cnt, &len);
         if (err == MF_OK && len > 0)
         {
             *recv_cnt += len;
@@ -136,10 +195,11 @@ static mf_err_t _receive_data_handler(mf_uartp_t *uartp)
 static mf_err_t _receive_data_handler2(mf_uartp_t *uartp)
 {
     mf_err_t err = MF_OK;
-
     uartp_private_t *private = (uartp_private_t *)uartp->private;
     uartp_bin_frame_t *frame = (uartp_bin_frame_t *)private->recv_buff;
-    size_t len = private->recv_cnt;
+    int len = private->recv_cnt;
+
+    if (uartp->status != UARTP_RECV_OVER)   return MF_OK;
 
     if (0x4040 == frame->cmd)
     {
@@ -174,7 +234,8 @@ static mf_err_t _uartp_init(mf_uartp_t *uartp)
         uartp->ops.lock();
 
     /* Init uart device */
-    // ...
+    err = _uart_device_init();
+    if (MF_OK != err) return MF_ERR_UNKNOW;
 
     /* Reset uartp param */
     uartp_private_t *private = (uartp_private_t *)uartp->private;
@@ -184,7 +245,7 @@ static mf_err_t _uartp_init(mf_uartp_t *uartp)
         return MF_ERR_TODO;
     }
 
-    memset(private->recv_buff, 0, UARTP_FRAME_BUFFNUM * sizeof(uartp_bin_frame_t));
+    memset(private->recv_buff, 0, UARTP_FRAME_BUFFNUM * UARTP_FRAME_SIZE);
     private->recv_cnt = 0;
     uartp->status = UARTP_IDEL;
 
@@ -212,7 +273,8 @@ static mf_err_t _uartp_deinit(mf_uartp_t *uartp)
         uartp->ops.lock();
 
     /* Deinit uart device */
-    // ...
+    err = _uart_device_deinit();
+    if (MF_OK != err) return MF_ERR_UNKNOW;
 
     /* Deinit over */ 
     uartp->is_init = 0;
@@ -229,10 +291,18 @@ static mf_err_t _uartp_deinit(mf_uartp_t *uartp)
 
 /**
  * @brief Send msg
+ * @details 
+ * 
+ * @param [in]  uartp   句柄
+ * @param [in]  arg1    数据指针(uint8_t *)
+ * @param [in]  arg2    数据长度(int)
+ * @param [out] arg3    实际发送数据的长度(int *)
+ * 
+ * @return 
 */
 static mf_err_t _uartp_send(mf_uartp_t *uartp, ...)
 {
-    mf_err_t err = MF_ERR;
+    mf_err_t err = MF_OK;
     if (!uartp)  return MF_ERR_PARAM;
     if (!uartp->is_init) return MF_ERR_UNDEFINE;
 
@@ -241,7 +311,17 @@ static mf_err_t _uartp_send(mf_uartp_t *uartp, ...)
         uartp->ops.lock();
 
     /* Send */
-    // ...
+    va_list ap;
+    va_start(ap, uartp);
+
+    uint8_t *data = (uint8_t *)va_arg(ap, void *);
+    uint8_t len = (int)va_arg(ap, int);
+    int *real_len = (int *)va_arg(ap, void *);
+
+    if (!data || !real_len) return MF_ERR_PARAM;
+    *real_len = _uart_device_send(data, len);
+
+    va_end(ap);
 
     /* Unlock */
     if (uartp->ops.unlock)
@@ -252,6 +332,13 @@ static mf_err_t _uartp_send(mf_uartp_t *uartp, ...)
 
 /**
  * @brief Recv msg
+ * 
+ * @param [in]  uartp   句柄
+ * @param [in]  arg1    数据指针(uint8_t *)
+ * @param [in]  arg2    数据长度(int)
+ * @param [out] arg3    实际接收数据的长度(int *)
+ * 
+ * @return 
 */
 static mf_err_t _uartp_recv(mf_uartp_t *uartp, ...)
 {
@@ -264,7 +351,17 @@ static mf_err_t _uartp_recv(mf_uartp_t *uartp, ...)
         uartp->ops.lock();
 
     /* Recv */
-    // ...
+    va_list ap;
+    va_start(ap, uartp);
+
+    uint8_t *data = (uint8_t *)va_arg(ap, void *);
+    uint8_t len = (int)va_arg(ap, int);
+    int *real_len = (int *)va_arg(ap, void *);
+
+    if (!data || !real_len) return MF_ERR_PARAM;
+    *real_len = _uart_device_recv(data, len);
+
+    va_end(ap);
 
     /* Unlock */
     if (uartp->ops.unlock)
@@ -278,7 +375,11 @@ static mf_err_t _uartp_recv(mf_uartp_t *uartp, ...)
  * @details 从串口发送带协议格式的串口消息
  * 
  * @param [in]  uartp   串口协议句柄
- * @param [in]  argN    arg1=>命令码(int)
+ * @param [in]  arg1    命令码(uartp_bin_cmd_t)
+ * @param [in]  arg2    数据段指针(uint8_t *)
+ * @param [in]  arg3    数据段长度(int)
+ * @param [in]  arg4    实际发送的长度
+ * 
  * @return 
 */
 static mf_err_t _uartp_send_protocol(mf_uartp_t *uartp, ...)
@@ -295,7 +396,20 @@ static mf_err_t _uartp_send_protocol(mf_uartp_t *uartp, ...)
     va_list ap;
     va_start(ap, uartp);
 
-    int cmd = va_arg(ap, int);
+    uartp_bin_cmd_t cmd = va_arg(ap, int);
+    uint8_t *data = (uint8_t *)va_arg(ap, void *);
+    int len = (int)va_arg(ap, int);
+    int *real_len = (int *)va_arg(ap, void *);
+    if (!data || !real_len) return MF_ERR_PARAM;
+    if (len + 7 > UARTP_FRAME_SIZE) return MF_ERR_PARAM;
+
+    uartp_bin_frame_t frame;
+    frame.head = 0x4040;
+    frame.cmd = cmd;
+    frame.len = len + 7;
+    memcpy(frame.data, data, len);
+    frame.crc = crc16_xmodem((const uint8_t *)&frame, frame.len);
+    *real_len = _uart_device_send((uint8_t *)&frame, frame.len);
 
     va_end(ap);
 
@@ -336,11 +450,8 @@ static mf_err_t _uartp_loop(mf_uartp_t *uartp, ...)
         uartp->ops.lock();
 
     /* Handler */
-    _receive_data_handler(uartp);
-    if (uartp->status == UARTP_RECV_OVER)
-    {
-        _receive_data_handler2(uartp);
-    }
+    _receive_data_handler(uartp);       // Recv and parse
+    _receive_data_handler2(uartp);      // Check and exec
 
     /* Unlock */
     if (uartp->ops.unlock)
@@ -354,7 +465,7 @@ static mf_err_t _uartp_loop(mf_uartp_t *uartp, ...)
  * @param [in]  uartp   串口协议句柄
  * @param [in]  argN    arg1=>命令码(int)
 */
-mf_err_t change(mf_uartp_t *uartp, ...)
+mf_err_t _uartp_control(mf_uartp_t *uartp, ...)
 {
     mf_err_t err = MF_ERR;
     if (!uartp)  return MF_ERR_PARAM;
@@ -364,7 +475,7 @@ mf_err_t change(mf_uartp_t *uartp, ...)
     if (uartp->ops.lock)
         uartp->ops.lock();
 
-    /* Change */
+    /* Control */
     va_list ap;
     va_start(ap, uartp);
 

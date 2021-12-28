@@ -32,17 +32,15 @@ typedef struct
     mf_err_t (*deinit)(mf_uartp_t *uartp);
     mf_err_t (*send)(mf_uartp_t *uartp, ...);
     mf_err_t (*recv)(mf_uartp_t *uartp, ...);
-    mf_err_t (*send_with_ptl)(mf_uartp_t *uartp, ...);
-
     mf_err_t (*lock)(void);
     mf_err_t (*unlock)(void);
     mf_err_t (*loop)(mf_uartp_t *uartp, ...);
-    mf_err_t (*change)(mf_uartp_t *uartp, ...);
+    mf_err_t (*control)(mf_uartp_t *uartp, ...);
 }uartp_ops_t;
 
 struct mf_uartp_t
 {
-    unsigned is_init : 1;
+    uint8_t is_init : 1;
     uartp_status_t status;
     void *private;
     uartp_ops_t ops;
