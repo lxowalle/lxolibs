@@ -244,13 +244,16 @@
 #define LEAVE_FF(fs, res)	return res
 #endif
 
-PARTITION VolToPart[FF_VOLUMES] = { 
-    {0, 1},     /* "0:" ==> PD#0 中的第一个分区 */ 
-    {0, 2},     /* "1:" ==> PD#0 中的第二个分区 */ 
-    {1, 0}      /* "2:" ==> PD#1 作为可移动驱动器 */ 
-};
 /* Definitions of logical drive - physical location conversion */
 #if FF_MULTI_PARTITION
+PARTITION VolToPart[FF_VOLUMES] = { 
+    {0, 1},     /* "0:" 内部flash, 分区1 板级配置信息 */ 
+    {0, 2},     /* "1:" 内部flash，分区2 人脸数据库*/ 
+    {0, 3},     /* "2:" 内部flash，分区3 资源文件和其他数据*/
+    {1, 1},     /* "3:" 外部flash，分区1 数据区 */
+    {1, 2},     /* "4:" 外部flash，分区2 数据区 */
+    {2, 0}      /* "5:" 可移动磁盘，注意如果有多个卷，移动磁盘前必须卸载这些卷 */
+};
 #define LD2PD(vol) VolToPart[vol].pd	/* Get physical drive number */
 #define LD2PT(vol) VolToPart[vol].pt	/* Get partition number (0:auto search, 1..:forced partition number) */
 #else
@@ -3377,7 +3380,9 @@ static FRESULT mount_volume (	/* FR_OK(0): successful, !=0: an error occurred */
 
 	fs->fs_type = 0;					/* Clear the filesystem object */
 	fs->pdrv = LD2PD(vol);				/* Volume hosting physical drive */
+    printf("BPB_BytsPerSec:%d\n", ld_word(fs->win + BPB_BytsPerSec));
 	stat = disk_initialize(fs->pdrv);	/* Initialize the physical drive */
+    printf("BPB_BytsPerSec:%d\n", ld_word(fs->win + BPB_BytsPerSec));
 	if (stat & STA_NOINIT) { 			/* Check if the initialization succeeded */
 		return FR_NOT_READY;			/* Failed to initialize due to no medium or hard error */
 	}
@@ -3460,26 +3465,29 @@ static FRESULT mount_volume (	/* FR_OK(0): successful, !=0: an error occurred */
 		fmt = FS_EXFAT;			/* FAT sub-type */
 	} else
 #endif	/* FF_FS_EXFAT */
+printf("=====================>%d\n", __LINE__);
 	{
 		if (ld_word(fs->win + BPB_BytsPerSec) != SS(fs)) return FR_NO_FILESYSTEM;	/* (BPB_BytsPerSec must be equal to the physical sector size) */
-
+        printf("BPB_BytsPerSec:%d\n", ld_word(fs->win + BPB_BytsPerSec));
 		fasize = ld_word(fs->win + BPB_FATSz16);		/* Number of sectors per FAT */
 		if (fasize == 0) fasize = ld_dword(fs->win + BPB_FATSz32);
 		fs->fsize = fasize;
-
+printf("=====================>%d\n", __LINE__);
 		fs->n_fats = fs->win[BPB_NumFATs];				/* Number of FATs */
+        printf("BPB_NumFATs:%d\n", fs->n_fats);
 		if (fs->n_fats != 1 && fs->n_fats != 2) return FR_NO_FILESYSTEM;	/* (Must be 1 or 2) */
 		fasize *= fs->n_fats;							/* Number of sectors for FAT area */
-
+printf("=====================>%d\n", __LINE__);
 		fs->csize = fs->win[BPB_SecPerClus];			/* Cluster size */
+        printf("BPB_SecPerClus:%d\n", fs->csize);
 		if (fs->csize == 0 || (fs->csize & (fs->csize - 1))) return FR_NO_FILESYSTEM;	/* (Must be power of 2) */
-
+printf("=====================>%d\n", __LINE__);
 		fs->n_rootdir = ld_word(fs->win + BPB_RootEntCnt);	/* Number of root directory entries */
 		if (fs->n_rootdir % (SS(fs) / SZDIRE)) return FR_NO_FILESYSTEM;	/* (Must be sector aligned) */
-
+printf("=====================>%d\n", __LINE__);
 		tsect = ld_word(fs->win + BPB_TotSec16);		/* Number of sectors on the volume */
 		if (tsect == 0) tsect = ld_dword(fs->win + BPB_TotSec32);
-
+printf("=====================>%d\n", __LINE__);
 		nrsv = ld_word(fs->win + BPB_RsvdSecCnt);		/* Number of reserved sectors */
 		if (nrsv == 0) return FR_NO_FILESYSTEM;			/* (Must not be 0) */
 
@@ -5861,13 +5869,13 @@ FRESULT f_mkfs (
 	if (!buf) buf = ff_memalloc(sz_buf * ss);	/* Use heap memory for working buffer */
 #endif
 	if (!buf) return FR_NOT_ENOUGH_CORE;
-
+printf("=============>%d\n", __LINE__);
 	/* Determine where the volume to be located (b_vol, sz_vol) */
 	b_vol = sz_vol = 0;
 	if (FF_MULTI_PARTITION && ipart != 0) {	/* Is the volume associated with any specific partition? */
 		/* Get partition location from the existing partition table */
-		if (disk_read(pdrv, buf, 0, 1) != RES_OK) LEAVE_MKFS(FR_DISK_ERR);	/* Load MBR */
-		if (ld_word(buf + BS_55AA) != 0xAA55) LEAVE_MKFS(FR_MKFS_ABORTED);	/* Check if MBR is valid */
+		if (disk_read(pdrv, buf, 0, 1) != RES_OK) LEAVE_MKFS(FR_DISK_ERR);printf("=============>%d\n", __LINE__);	/* Load MBR */
+		if (ld_word(buf + BS_55AA) != 0xAA55) LEAVE_MKFS(FR_MKFS_ABORTED);printf("=============>%d\n", __LINE__);	/* Check if MBR is valid */
 #if FF_LBA64
 		if (buf[MBR_Table + PTE_System] == 0xEE) {	/* GPT protective MBR? */
 			DWORD n_ent, ofs;
@@ -5893,11 +5901,11 @@ FRESULT f_mkfs (
 		} else
 #endif
 		{	/* Get the partition location from MBR partition table */
-			pte = buf + (MBR_Table + (ipart - 1) * SZ_PTE);
+			pte = buf + (MBR_Table + (ipart - 1) * SZ_PTE);printf("=============>%d\n", __LINE__);
 			if (ipart > 4 || pte[PTE_System] == 0) LEAVE_MKFS(FR_MKFS_ABORTED);	/* No partition? */
 			b_vol = ld_dword(pte + PTE_StLba);		/* Get volume start sector */
 			sz_vol = ld_dword(pte + PTE_SizLba);	/* Get volume size */
-		}
+		}printf("=============>%d\n", __LINE__);
 	} else {	/* The volume is associated with a physical drive */
 		if (disk_ioctl(pdrv, GET_SECTOR_COUNT, &sz_vol) != RES_OK) LEAVE_MKFS(FR_DISK_ERR);
 		if (!(fsopt & FM_SFD)) {	/* To be partitioned? */
@@ -5939,7 +5947,7 @@ FRESULT f_mkfs (
 	} while (0);
 
 	vsn = (DWORD)sz_vol + GET_FATTIME();	/* VSN generated from current time and partitiion size */
-
+printf("=============>%d\n", __LINE__);
 #if FF_FS_EXFAT
 	if (fsty == FS_EXFAT) {	/* Create an exFAT volume */
 		DWORD szb_bit, szb_case, sum, nbit, clu, clen[3];
@@ -6102,7 +6110,7 @@ FRESULT f_mkfs (
 	} else
 #endif	/* FF_FS_EXFAT */
 	{	/* Create an FAT/FAT32 volume */
-		do {
+		do {printf("=============>%d\n", __LINE__);
 			pau = sz_au;
 			/* Pre-determine number of clusters and FAT sub-type */
 			if (fsty == FS_FAT32) {	/* FAT32 volume */
@@ -6133,7 +6141,7 @@ FRESULT f_mkfs (
 			}
 			b_fat = b_vol + sz_rsv;						/* FAT base */
 			b_data = b_fat + sz_fat * n_fat + sz_dir;	/* Data base */
-
+printf("=============>%d\n", __LINE__);
 			/* Align data area to erase block boundary (for flash memory media) */
 			n = (DWORD)(((b_data + sz_blk - 1) & ~(sz_blk - 1)) - b_data);	/* Sectors to next nearest from current data base */
 			if (fsty == FS_FAT32) {		/* FAT32: Move FAT */
@@ -6175,7 +6183,7 @@ FRESULT f_mkfs (
 			/* Ok, it is the valid cluster configuration */
 			break;
 		} while (1);
-
+printf("=============>%d\n", __LINE__);
 #if FF_USE_TRIM
 		lba[0] = b_vol; lba[1] = b_vol + sz_vol - 1;	/* Inform storage device that the volume area may be erased */
 		disk_ioctl(pdrv, CTRL_TRIM, lba);

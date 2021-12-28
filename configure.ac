@@ -30,5 +30,7 @@ AC_CONFIG_FILES([Makefile
                  libs/lib_b/src/Makefile
                  libs/lib_c/src/Makefile
                  libs/libfatfs/source/Makefile
-                 libs/liblinuxapi/src/Makefile])
+                 libs/liblinuxapi/src/Makefile
+                 libs/uart_protocol/Makefile
+                 libs/uart_protocol/test/Makefile])
 AC_OUTPUT
