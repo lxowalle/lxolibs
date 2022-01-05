@@ -1,10 +1,18 @@
 #include "main.h"
-#include "log.h"
+#include "common.h"
 #include "core.h"
 #include "sensor.h"
-#include <stdio.h>
 #include <string.h>
-#include <stdint.h>
+
+__attribute__((constructor)) static void _start_handler(void)
+{
+    LOGI("start handler!\n");
+}
+
+__attribute__((destructor)) static void _exit_handler(void)
+{
+    LOGI("exit handler!\n");
+}
 
 static void _printf_nerve(nerve_t *nerve, int type,  int level)
 {

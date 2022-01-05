@@ -1,8 +1,8 @@
+#include "FreeRTOS.h"
 #include "common.h"
 
 int main(void)
 {
-    LOGI("Hello world!\n");
-    
+    LOGI("FreeRTOS Demo\n");
     return 0;
 }

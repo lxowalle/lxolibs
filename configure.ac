@@ -19,15 +19,19 @@ AC_PROG_RANLIB
 # Checks for library functions.
 
 AC_CONFIG_FILES([Makefile
+                 apps/Makefile
                  apps/app1/Makefile
                  apps/core/Makefile
+                 apps/freertos-demo/Makefile
+                 apps/freertos-demo/demo0/Makefile
                  apps/template/Makefile
+                 libs/common/Makefile
                  libs/kalman/Makefile
                  libs/kalman/lib/Makefile
                  libs/kalman/test/Makefile
-                 libs/common/Makefile
                  libs/libfatfs/source/Makefile
                  libs/liblinuxapi/src/Makefile
                  libs/uart_protocol/Makefile
-                 libs/uart_protocol/test/Makefile])
+                 libs/uart_protocol/test/Makefile
+                 third_party/FreeRTOS-Kernel/Makefile])
 AC_OUTPUT
