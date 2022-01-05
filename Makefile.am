@@ -1,5 +1,4 @@
 SUBDIRS =   apps/app1\
-            apps/app2\
             apps/core\
             apps/template\
             libs/kalman/lib\

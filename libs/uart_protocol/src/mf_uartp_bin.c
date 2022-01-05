@@ -1,5 +1,6 @@
 #include "mf_uartp_bin.h"
-
+#include "linux_uart.h"
+int linux_uart_fd = 0;
 /**
  * @brief Command list
  * @details Add command and cb here.the last one item must set cb to NULL
@@ -21,6 +22,17 @@ static mf_err_t _uart_device_init(void)
     // TODO
     // ...
 
+    // TEST
+    mf_brd_uart_t uart_cfg = 
+    {
+        .baud = 115200,
+        .data_bits = 8,
+        .parity = 'N',
+        .stop_bits = 1
+    };
+    linux_uart_fd = linux_uart_init("/dev/ttyUSB0", &uart_cfg);
+    printf("Linux uart fd:%d\n", linux_uart_fd);
+
     return err;
 }
 
@@ -35,6 +47,8 @@ static mf_err_t _uart_device_deinit(void)
     // TODO
     // ...
 
+    // TEST
+    linux_uart_deinit(linux_uart_fd);
     return err;
 }
 
@@ -49,6 +63,9 @@ static int _uart_device_send(uint8_t *data, int len)
     // TODO
     // ...
 
+    // TEST
+    real_len = linux_uart_write(linux_uart_fd, len, data);
+    LOGI("fd:%d Real len:%d\n", linux_uart_fd, real_len);
     return real_len;
 }
 
@@ -63,6 +80,9 @@ static int _uart_device_recv(uint8_t *data, int len)
     // TODO
     // ...
 
+    // TEST
+    real_len = linux_uart_read(linux_uart_fd, len, data);
+    LOGI("fd:%d Real len:%d\n", linux_uart_fd, real_len);
     return real_len;
 }
 
@@ -360,7 +380,7 @@ static mf_err_t _uartp_recv(mf_uartp_t *uartp, ...)
 
     if (!data || !real_len) return MF_ERR_PARAM;
     *real_len = _uart_device_recv(data, len);
-
+    // LOGA("123", data, *real_len);
     va_end(ap);
 
     /* Unlock */
@@ -433,7 +453,7 @@ static mf_err_t _uartp_lock(void)
 */
 static mf_err_t _uartp_unlock(void)
 {
-    // Lock
+    // Unlock
 }
 
 /**
@@ -511,7 +531,7 @@ static mf_uartp_t uartp_bin =
 };
 
 /**
- * @brief 获取本句柄
+ * @brief Get uartp bin handle
 */
 mf_uartp_t *get_uartp_bin(void)
 {

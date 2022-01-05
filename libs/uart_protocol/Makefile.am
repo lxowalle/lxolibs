@@ -8,8 +8,8 @@ noinst_LIBRARIES        = libuart_protocol.a                      #   编译为�
 # template_LIBRARIES    =                       #   编译为库文件(安装目录与可执行文件相同)
 # template_LTLIBRARIES  =                       #   编译为库文件(libtool)(安装目录与可执行文件相同)
 
-libuart_protocol_a_SOURCES      = src/mf_uartp.c src/mf_uartp_bin.c
-noinst_HEADERS          = inc/mf_uartp.h inc/mf_err.h inc/mf_uartp_bin.h inc/mf_log.h 
+libuart_protocol_a_SOURCES      = src/mf_uartp.c src/mf_uartp_bin.c src/linux_uart.c
+noinst_HEADERS          = inc/mf_uartp.h inc/mf_err.h inc/mf_uartp_bin.h inc/mf_log.h inc/linux_uart.h 
 # template_HEADERS      =                       #   目标文件依赖的所有头文件(安装目录与可执行文件相同)
 
 # template_LIBADD       =                       #   编译时需要加载的其他的库

@@ -1,1 +1,0 @@
-void liba_say_ok(void);

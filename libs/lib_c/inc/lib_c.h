@@ -1,1 +1,0 @@
-void libc_say_ok(void);

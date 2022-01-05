@@ -54,6 +54,4 @@ struct mf_uartp_t
 */
 mf_uartp_t *mf_uartp_choose(uartp_type_t type);
 
-
-
 #endif /* __MF_UARTP_H */
