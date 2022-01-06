@@ -27,4 +27,13 @@
 
 #define LOGN()   LOGD("none\n")
 
+#define LOGHEX(desc, buff, len) do{\
+    printf(TERMINAL_COLOR_GREEN "[%s]:" TERMINAL_COLOR_END, desc);\
+    for (int i = 0; i < len; i ++)\
+    {\
+        printf("%.2X ", buff[i]);\
+    }\
+    printf("\n");\
+}while(0)
+
 #endif // __LOG_H

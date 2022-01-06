@@ -15,3 +15,8 @@ SUBDIRS                 += ../../../libs/common
 demo0_CPPFLAGS          += -I../../../libs/common
 demo0_LDADD             += ../../../libs/common/libcommon.a
 
+# Link libuartp
+SUBDIRS                 += ../../../libs/uartp
+demo0_CPPFLAGS          += -I../../../libs/uartp/inc
+demo0_LDADD             += ../../../libs/uartp/libuartp.a
+

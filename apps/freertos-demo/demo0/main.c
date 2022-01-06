@@ -1,77 +1,75 @@
 #include "FreeRTOS.h"
 #include "common.h"
 #include "task.h"
+#include "../../../libs/uartp/inc/mf_uartp.h"
 
-void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
-                                    StackType_t **ppxIdleTaskStackBuffer,
-                                    uint32_t *pulIdleTaskStackSize )
+typedef struct
 {
-/* If the buffers to be provided to the Idle task are declared inside this
-function then they must be declared static -- otherwise they will be allocated on
-the stack and so not exists after this function exits. */
-static StaticTask_t xIdleTaskTCB;
-static StackType_t uxIdleTaskStack[ configMINIMAL_STACK_SIZE ];
+    mf_err_t type;
+    char str[30];
+}mf_err_str_t;
 
-    /* Pass out a pointer to the StaticTask_t structure in which the Idle task's
-    state will be stored. */
-    *ppxIdleTaskTCBBuffer = &xIdleTaskTCB;
-
-    /* Pass out the array that will be used as the Idle task's stack. */
-    *ppxIdleTaskStackBuffer = uxIdleTaskStack;
-
-    /* Pass out the size of the array pointed to by *ppxIdleTaskStackBuffer.
-    Note that, as the array is necessarily of type StackType_t,
-    configMINIMAL_STACK_SIZE is specified in words, not bytes. */
-    *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
-}
-
-void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer, uint32_t *pulTimerTaskStackSize )
+const mf_err_str_t mf_err_str_arr[] = 
 {
-/* If the buffers to be provided to the Timer task are declared inside this
-function then they must be declared static - otherwise they will be allocated on
-the stack and so not exists after this function exits. */
-static StaticTask_t xTimerTaskTCB;
-static StackType_t uxTimerTaskStack[ configTIMER_TASK_STACK_DEPTH ];
+    {MF_OK, "OK"},
+    {MF_ERR_PARAM, "Param is invalid"},
+    {MF_ERR_MEM, "Memory is overflow"},
+    {MF_ERR_NORMAL, "Normal error"},
+    {MF_ERR_REDEFINE, "Something had redefine"},
+    {MF_ERR_UNDEFINE, "Somthing have not define"},
+    {MF_ERR_UNKNOWN, "Unknown cause of error"},
+    {MF_ERR_TODO, "TODO error"},
+    {MF_ERR_INIT, "Init error"},
+    {MF_ERR_MAX, "Can't find error string"},
+};
 
-	/* Pass out a pointer to the StaticTask_t structure in which the Timer
-	task's state will be stored. */
-	*ppxTimerTaskTCBBuffer = &xTimerTaskTCB;
-
-	/* Pass out the array that will be used as the Timer task's stack. */
-	*ppxTimerTaskStackBuffer = uxTimerTaskStack;
-
-	/* Pass out the size of the array pointed to by *ppxTimerTaskStackBuffer.
-	Note that, as the array is necessarily of type StackType_t,
-	configMINIMAL_STACK_SIZE is specified in words, not bytes. */
-	*pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
-}
-
-void vApplicationMallocFailedHook( void )
+const char *mf_err_str(mf_err_t type)
 {
-	/* Called if a call to pvPortMalloc() fails because there is insufficient
-	free memory available in the FreeRTOS heap.  pvPortMalloc() is called
-	internally by FreeRTOS API functions that create tasks, queues, software
-	timers, and semaphores.  The size of the FreeRTOS heap is set by the
-	configTOTAL_HEAP_SIZE configuration constant in FreeRTOSConfig.h. */
-	taskDISABLE_INTERRUPTS();
-	for( ;; );
+    int max_size = sizeof(mf_err_str_arr) / sizeof(mf_err_str_arr[0]);
+    for (int i = 0; i < max_size - 1; i ++)
+    {
+        if (type == mf_err_str_arr[i].type)
+        {
+            return mf_err_str_arr[i].str;
+        }
+    }
+    return mf_err_str_arr[max_size - 1].str;
 }
 
 static TaskHandle_t user_handle0 = NULL;
 void user_task0(void *param);
 
-int main(void)
+static TaskHandle_t uartp_irq_handle = NULL;
+void uartp_irq_task(void *param);
+
+__attribute__((constructor)) static void _start_handler(void)
 {
-    LOGI("FreeRTOS Demo\n");
-    
+    LOGI("start handler!\n");
     BaseType_t res;
+    mf_err_t err = MF_OK;
+    err = mf_uartp_choose(UARTP_TYPE_BIN);
+    if (MF_OK != err)   {LOGE("uartp choose failed! reason: %s\n", mf_err_str(err)); exit(1);}
+    err = mf_uartp.init();
+    if (MF_OK != err)   {LOGE("uartp choose failed! reason: %s\n", mf_err_str(err)); exit(1);}
+    res = xTaskCreate(uartp_irq_task, "uartp recv task", configMINIMAL_STACK_SIZE, NULL, 4, &uartp_irq_handle);
+    if (pdPASS != res)  {LOGE("Create task failed! res: %d\n", res); exit(1);}
+
     res = xTaskCreate(user_task0, "user task0", configMINIMAL_STACK_SIZE, (void *)1, 3, &user_handle0);
     if (res == pdPASS)
     {
         LOGI("Create task successfully!\n");
     }
+}
 
-	/* Start the scheduler. */
+__attribute__((destructor)) static void _exit_handler(void)
+{
+    LOGI("exit handler!\n");
+}
+
+int main(void)
+{
+    LOGI("FreeRTOS Demo\n");
+
 	vTaskStartScheduler();
 
     return 0;
@@ -87,4 +85,53 @@ void user_task0(void *param)
 
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
+}
+
+void uartp_irq_task(void *param)
+{
+    uint8_t buff[128];
+    int cnt = 0;
+    int real_cnt = 0;
+    while (1)
+    {
+        mf_err_t err = mf_uartp.recv(buff, sizeof(buff), &real_cnt);
+        if (real_cnt > 0)
+        {
+            LOGHEX("recv", buff, real_cnt);
+
+            err = mf_uartp.send(buff, real_cnt, NULL);
+            if (MF_OK != err) LOGE("err:%s\n", mf_err_str(err));
+        }
+        if (MF_OK != err) LOGE("err:%s\n", mf_err_str(err));
+
+        vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
+void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
+                                    StackType_t **ppxIdleTaskStackBuffer,
+                                    uint32_t *pulIdleTaskStackSize )
+{
+    static StaticTask_t xIdleTaskTCB;
+    static StackType_t uxIdleTaskStack[ configMINIMAL_STACK_SIZE ];
+
+    *ppxIdleTaskTCBBuffer = &xIdleTaskTCB;
+    *ppxIdleTaskStackBuffer = uxIdleTaskStack;
+    *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+}
+
+void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer, uint32_t *pulTimerTaskStackSize )
+{
+    static StaticTask_t xTimerTaskTCB;
+    static StackType_t uxTimerTaskStack[ configTIMER_TASK_STACK_DEPTH ];
+
+	*ppxTimerTaskTCBBuffer = &xTimerTaskTCB;
+	*ppxTimerTaskStackBuffer = uxTimerTaskStack;
+	*pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
+}
+
+void vApplicationMallocFailedHook( void )
+{
+	taskDISABLE_INTERRUPTS();
+	for( ;; );
 }

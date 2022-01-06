@@ -195,3 +195,78 @@ int linux_uart_write(int fd, int cnt, uint8_t* buf)
 {
     return write(fd, buf, cnt);
 }
+
+#include "mf_uartp.h"
+static int linux_uart_fd = -1;
+/**
+ * @brief Init uart device
+ * @return 
+*/
+mf_err_t uartp_device_init(void)
+{
+    mf_err_t err = MF_OK;
+
+    // TODO
+    // ...
+
+    // TEST
+    mf_brd_uart_t uart_cfg = 
+    {
+        .baud = 115200,
+        .data_bits = 8,
+        .parity = 'N',
+        .stop_bits = 1
+    };
+    linux_uart_fd = linux_uart_init("/dev/ttyUSB0", &uart_cfg);
+    if (linux_uart_fd < 0)  return MF_ERR_INIT;
+
+    return err;
+}
+
+/**
+ * @brief Deinit uart device
+ * @return 
+*/
+mf_err_t uartp_device_deinit(void)
+{
+    mf_err_t err = MF_OK;
+
+    // TODO
+    // ...
+
+    // TEST
+    linux_uart_deinit(linux_uart_fd);
+    return err;
+}
+
+/**
+ * @brief Uart send data
+ * @return
+*/
+int uartp_device_send(uint8_t *data, int len)
+{
+    int real_len = 0;
+
+    // TODO
+    // ...
+
+    // TEST
+    real_len = linux_uart_write(linux_uart_fd, len, data);
+    return real_len;
+}
+
+/**
+ * @brief Uart recv data
+ * @return
+*/
+int uartp_device_recv(uint8_t *data, int len)
+{
+    int real_len = 0;
+
+    // TODO
+    // ...
+
+    // TEST
+    real_len = linux_uart_read(linux_uart_fd, len, data);
+    return real_len;
+}

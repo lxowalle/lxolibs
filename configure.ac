@@ -31,7 +31,7 @@ AC_CONFIG_FILES([Makefile
                  libs/kalman/test/Makefile
                  libs/libfatfs/source/Makefile
                  libs/liblinuxapi/src/Makefile
-                 libs/uart_protocol/Makefile
-                 libs/uart_protocol/test/Makefile
+                 libs/uartp/Makefile
+                 libs/uartp/test/Makefile
                  third_party/FreeRTOS-Kernel/Makefile])
 AC_OUTPUT
