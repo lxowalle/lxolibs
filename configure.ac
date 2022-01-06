@@ -3,7 +3,7 @@
 
 AC_PREREQ([2.69])
 AC_INIT([lxolibs], [0.0.1], [lxowalle@outlook.com])
-AC_CONFIG_SRCDIR([apps/app1/main.c])
+# AC_CONFIG_SRCDIR([apps/app1/main.c])
 
 # AC_CONFIG_HEADERS([config.h])
 AM_INIT_AUTOMAKE([gnu subdir-objects])
