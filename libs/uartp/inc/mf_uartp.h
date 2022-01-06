@@ -36,7 +36,7 @@ typedef enum
     MF_ERR_MAX
 }mf_err_t;
 
-typedef mf_err_t (*uartp_cmd_cb_t)(mf_uartp_t* uartp, ...);
+typedef mf_err_t (*uartp_cmd_cb_t)(mf_uartp_t *uartp, uint8_t *data, int len);
 
 struct mf_uartp_t
 {
@@ -47,6 +47,7 @@ struct mf_uartp_t
     mf_err_t (*deinit)(void);
     mf_err_t (*send)(uint8_t *data, int len, int *real_len);
     mf_err_t (*recv)(uint8_t *data, int len, int *real_len);
+    mf_err_t (*send_ptl)(int cmd, uint8_t *data, int len, int *real_len);
     mf_err_t (*lock)(void);
     mf_err_t (*unlock)(void);
     mf_err_t (*loop)(void);

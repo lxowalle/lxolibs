@@ -11,7 +11,13 @@
 
 /**
  *  @brief 串口协议帧格式
- *  @details |帧头(2B)|CRC校验值(2B)|帧长度(2B)|命令码(1B)|帧数据载荷(nB)|
+ *  @details 
+ *  (主机)发送时帧格式：
+ *      |帧头(2B)|帧总长度(2B)|CRC校验值(2B)|命令码(1B)|帧数据载荷(nB)| 
+ *      (crc校验内容:命令码+帧数据载荷)            
+ *  (主机)接收时帧格式：
+ *      |帧头(2B)|帧总长度(2B)|CRC校验值(2B)|命令码(1B)|错误码(1B)|帧数据载荷(nB)|    
+ *      (crc校验内容:命令码+错误码+帧数据载荷)
  */
 typedef struct
 {
@@ -24,39 +30,43 @@ typedef struct
 
 typedef enum
 {
-    HEXCMD_PING         = 0x00,
-    HEXCMD_ABORT        = 0x01,
-    HEXCMD_INFO         = 0x02,
-    HEXCMD_BAUD         = 0x03,
-    HEXCMD_RECORD       = 0x04,
-    HEXCMD_CONFIRM      = 0x05,
-    HEXCMD_DEL          = 0x06,
-    HEXCMD_FR_RUN       = 0x07,
-    HEXCMD_FR_RES       = 0x08,             // 这个命令用来接收外部响应
-    HEXCMD_FR_GATE      = 0x09,
-    HEXCMD_LED          = 0x0A,
-    HEXCMD_RELAY        = 0x0B,
-    HEXCMD_RSTCFG       = 0x0C,
-    HEXCMD_REBOOT       = 0x0D,
+    BINCMD_PING         = 0x00,     /* 向模块发送ping并等待响应。用来检查是否与模块连接正常 */
+    BINCMD_ABORT        = 0x01,     /* 中断模块的一些操作 */
+    BINCMD_INFO         = 0x02,     /* 获取模块的版本信息 */
+    BINCMD_BAUD         = 0x03,     /* 检查模块是否初始化完成 */
+    BINCMD_RECORD       = 0x04,     /* 录入人脸 */
+    BINCMD_CONFIRM      = 0x05,     /* 录入人脸确认，在录入多张人脸时使用 */
+    BINCMD_DEL          = 0x06,     /* 删除录入的人脸 */
+    BINCMD_FR_RUN       = 0x07,     /* 开始/停止人脸识别 */
+    BINCMD_FR_RES       = 0x08,     /* (模块主动发送)人脸识别结果 */
+    BINCMD_FR_GATE      = 0x09,
+    BINCMD_LED          = 0x0A,
+    BINCMD_RELAY        = 0x0B,
+    BINCMD_RSTCFG       = 0x0C,
 
-    HEXCMD_IMPORT       = 0x10,
-    HEXCMD_FCNT         = 0x11,
-    HEXCMD_FLIST        = 0x12,
-    HEXCMD_FTR          = 0x13,
-    HEXCMD_FTRALL       = 0x14,
-    HEXCMD_FACEPOS      = 0x15,
-    HEXCMD_GET_PICFTR   = 0x16,
+    BINCMD_IMPORT       = 0x10, 
+    BINCMD_FCNT         = 0x11,
+    BINCMD_FLIST        = 0x12,
+    BINCMD_FTR          = 0x13,
+    BINCMD_FTRALL       = 0x14,
+    BINCMD_FACEPOS      = 0x17,
+    BINCMD_GET_PICFTR   = 0x16,
 
-    HEXCMD_PICADD       = 0x20,
-    HEXCMD_STRADD       = 0x21,
-    HEXCMD_DISDEL       = 0x22,
-
-    HEXCMD_QRSCAN       = 0x30,
-    HEXCMD_QRRES        = 0x31,
-    HEXCMD_PIC_SNAP     = 0x32,
-    HEXCMD_PLAYBACK     = 0x33,
-    HEXCMD_INVALID      = 0xFF,
+	BINCMD_PICADD  		= 0x20,
+	BINCMD_STRADD  		= 0x21,
+	BINCMD_ITEMDEL 		= 0x22,
+	BINCMD_REBOOT  		= 0x23,
+	BINCMD_SOFT_CFG 	= 0x24,
+	BINCMD_HARD_CFG 	= 0x25,
+	BINCMD_PIC_CFG  	= 0x26,
+    BINCMD_INVALID      = 0xFF,
 }uartp_bin_cmd_t;
+
+typedef enum
+{
+    UARTPERR_NONE           = 0,
+    UARTPERR_PARAM          = 1,
+}uartp_bin_err_t;
 
 /**
  * @brief 命令码与回调函数

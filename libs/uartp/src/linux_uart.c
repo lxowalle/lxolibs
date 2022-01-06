@@ -249,7 +249,7 @@ int uartp_device_send(uint8_t *data, int len)
 
     // TODO
     // ...
-
+    
     // TEST
     real_len = linux_uart_write(linux_uart_fd, len, data);
     return real_len;

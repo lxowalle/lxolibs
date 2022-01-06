@@ -42,7 +42,7 @@ void user_task0(void *param);
 static TaskHandle_t uartp_irq_handle = NULL;
 void uartp_irq_task(void *param);
 
-__attribute__((constructor)) static void _start_handler(void)
+static void __attribute__((constructor)) _start_handler(void)
 {
     LOGI("start handler!\n");
     BaseType_t res;
@@ -51,17 +51,14 @@ __attribute__((constructor)) static void _start_handler(void)
     if (MF_OK != err)   {LOGE("uartp choose failed! reason: %s\n", mf_err_str(err)); exit(1);}
     err = mf_uartp.init();
     if (MF_OK != err)   {LOGE("uartp choose failed! reason: %s\n", mf_err_str(err)); exit(1);}
-    res = xTaskCreate(uartp_irq_task, "uartp recv task", configMINIMAL_STACK_SIZE, NULL, 4, &uartp_irq_handle);
-    if (pdPASS != res)  {LOGE("Create task failed! res: %d\n", res); exit(1);}
+    res = xTaskCreate(uartp_irq_task, "uartp irq task", configMINIMAL_STACK_SIZE, NULL, 4, &uartp_irq_handle);
+    if (pdPASS != res)  {LOGE("Create uartp irq task failed! res: %ld\n", res); exit(1);}
 
     res = xTaskCreate(user_task0, "user task0", configMINIMAL_STACK_SIZE, (void *)1, 3, &user_handle0);
-    if (res == pdPASS)
-    {
-        LOGI("Create task successfully!\n");
-    }
+    if (pdPASS != res)  {LOGE("Create user task0 failed! res: %ld\n", res); exit(1);}
 }
 
-__attribute__((destructor)) static void _exit_handler(void)
+static void __attribute__((destructor)) _exit_handler(void)
 {
     LOGI("exit handler!\n");
 }
@@ -94,21 +91,13 @@ void uartp_irq_task(void *param)
     int real_cnt = 0;
     while (1)
     {
-        mf_err_t err = mf_uartp.recv(buff, sizeof(buff), &real_cnt);
-        if (real_cnt > 0)
-        {
-            LOGHEX("recv", buff, real_cnt);
-
-            err = mf_uartp.send(buff, real_cnt, NULL);
-            if (MF_OK != err) LOGE("err:%s\n", mf_err_str(err));
-        }
-        if (MF_OK != err) LOGE("err:%s\n", mf_err_str(err));
+        mf_uartp.loop();
 
         vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
 
-void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
+void __attribute__((weak)) vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
                                     StackType_t **ppxIdleTaskStackBuffer,
                                     uint32_t *pulIdleTaskStackSize )
 {
@@ -120,7 +109,7 @@ void vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,
     *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
 }
 
-void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer, uint32_t *pulTimerTaskStackSize )
+void __attribute__((weak)) vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, StackType_t **ppxTimerTaskStackBuffer, uint32_t *pulTimerTaskStackSize )
 {
     static StaticTask_t xTimerTaskTCB;
     static StackType_t uxTimerTaskStack[ configTIMER_TASK_STACK_DEPTH ];
@@ -130,7 +119,7 @@ void vApplicationGetTimerTaskMemory( StaticTask_t **ppxTimerTaskTCBBuffer, Stack
 	*pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
 }
 
-void vApplicationMallocFailedHook( void )
+void __attribute__((weak)) vApplicationMallocFailedHook( void )
 {
 	taskDISABLE_INTERRUPTS();
 	for( ;; );
