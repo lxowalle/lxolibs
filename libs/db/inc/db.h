@@ -53,6 +53,8 @@ typedef enum
 typedef enum
 {
     MF_OK = 0,
+    MF_OVER,
+    MF_CONTINUE,
     MF_ERR_PARAM,
     MF_ERR_MEM,
     MF_ERR_NORMAL,
@@ -95,7 +97,7 @@ typedef struct
     db_err_t (*select)(uint8_t *uid, void* item);
     db_err_t (*update)(uint8_t *uid, void* item);
     db_err_t (*iterate_init)(void);
-    int (*iterate)(void);
+    int (*iterate)(uint8_t *uid, void *item);
     int (*num)(void);
 
     db_err_t (*control)(int cmd, ...);

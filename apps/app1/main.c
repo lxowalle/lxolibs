@@ -169,12 +169,50 @@ static void __attribute__((constructor)) facedb_test(void)
     if (MF_OK != err) {LOGE("Error %d\n", err); exit(-1);}
 
     LOGI("DB Insert\n");
-    uint32_t index = 2048;
+    uint32_t index = 2047;
     uint8_t ftr[DB_FTR_SIZE];
-    memset(ftr, 0x55, sizeof(ftr));
+    memset(ftr, 0x66, sizeof(ftr));
     err = db.insert(db_id2uid(index), &ftr);
     if (MF_OK != err) {LOGW("Can't insert %d, err=%d\n", index, err); }
     LOGI("Total face num: %d\n", db.num());
+
+    LOGI("DB Select\n");
+    uint8_t select_ftr[DB_FTR_SIZE];
+    db_item_t select_item = {0};
+    err = db.select(db_id2uid(index), &select_ftr);
+    if (MF_OK != err) {LOGW("Can't select %d, err=%d\n", index, err); }
+    if (memcmp(select_ftr, ftr, sizeof(ftr)))
+    {
+        LOGE("Select error, bad value!\n");
+        LOGHEX("Insert ftr", ftr, sizeof(ftr));
+        LOGHEX("Select ftr", select_ftr, sizeof(select_ftr));
+    }
+
+    LOGI("DB Update\n");
+    uint8_t update_ftr[DB_FTR_SIZE];
+    memset(update_ftr, 0x44, sizeof(update_ftr));
+    err = db.update(db_id2uid(index), update_ftr);
+    if (MF_OK != err) {LOGW("Can't update %d, err=%d\n", index, err); }
+    err = db.select(db_id2uid(index), &select_ftr);
+    if (MF_OK != err) {LOGW("Can't select %d, err=%d\n", index, err); }
+    if (memcmp(select_ftr, update_ftr, DB_FTR_SIZE))
+    {
+        LOGE("Select error, bad value!\n");
+        LOGHEX("Update ftr", update_ftr, DB_FTR_SIZE);
+        LOGHEX("Select ftr", select_ftr, sizeof(select_ftr));
+    }
+
+    LOGI("DB Iterate\n");
+    err = db.iterate_init();
+    if (MF_OK != err) {LOGW("Can't init iterate %d, err=%d\n", index, err); }
+    uint8_t iterate_uid[DB_UID_SIZE];
+    uint8_t iterate_ftr[DB_FTR_SIZE];
+    while (MF_CONTINUE == db.iterate(iterate_uid, iterate_ftr))
+    {
+        LOGI("index:%d\n", db_uid2id(iterate_uid));
+        LOGHEX("uid", iterate_uid, DB_UID_SIZE);
+        LOGHEX("ftr", iterate_ftr, DB_FTR_SIZE);
+    }
 
     LOGI("DB Delete\n");
     err = db.delete(db_id2uid(index));

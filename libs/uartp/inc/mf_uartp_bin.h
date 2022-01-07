@@ -77,6 +77,6 @@ typedef struct
     uartp_cmd_cb_t cb;
 }mf_uartp_bin_item_t;
 
-mf_uartp_t *get_uartp_bin(void);
+mf_uartp_t *get_uartp_bin_handle(void);
 
 #endif /* __MF_UARTP_BIN_H */

@@ -13,17 +13,19 @@ static db_t facedb;
 typedef struct
 {
     uint8_t need_init : 1;
+    uint8_t iterate_run : 1;
+    uint32_t iterate_idx;
     db_header_t header;
 }facedb_private_t;
 
 #define _header_index_set(index)
 
-static uint32_t _get_header_index_bit(db_header_t *header, uint32_t index)
+static uint32_t _get_header_index_bit(const db_header_t * header, uint32_t index)
 {
     return ((header->index[index / 32] >> (index % 32)) & 0x01);
 }
 
-static uint32_t _get_face_num_in_header(db_header_t *header)
+static uint32_t _get_face_num_in_header(const db_header_t *header)
 {
     uint32_t face_num = 0;
     for (int i = 0; i < sizeof(header->index) / sizeof(header->index[0]); i ++)
@@ -40,7 +42,7 @@ static uint32_t _get_face_num_in_header(db_header_t *header)
     return face_num;
 }
 
-static uint32_t _get_header_checknum(db_header_t *header)
+static uint32_t _get_header_checknum(const db_header_t * header)
 {
     uint32_t checksum = header->version
                     + header->total
@@ -225,7 +227,7 @@ static db_err_t _facedb_insert(uint8_t *uid, void *item)
     facedb_private_t *private = (facedb_private_t *)db->private;
 
     if (!db->is_init)    return MF_ERR_UNINIT;
-
+    if (!uid || !item)  return MF_ERR_PARAM;
     /* Lock */
     if (db->lock)
         db->lock();
@@ -285,7 +287,7 @@ static db_err_t _facedb_delete(uint8_t *uid)
     db_t *db = (db_t *)&facedb;
     facedb_private_t *private = (facedb_private_t *)db->private;
     if (!db->is_init)    return MF_ERR_UNINIT;
-
+    if (!uid)   return MF_ERR_PARAM;
     /* Lock */
     if (db->lock)
         db->lock();
@@ -328,15 +330,44 @@ static db_err_t _facedb_select(uint8_t *uid, void* item)
 {
     db_err_t err = MF_OK;
     db_t *db = (db_t *)&facedb;
+    facedb_private_t *private = (facedb_private_t *)db->private;
     if (!db->is_init)    return MF_ERR_UNINIT;
-
+    if (!uid || !item)  return MF_ERR_PARAM;
     /* Lock */
     if (db->lock)
         db->lock();
 
-    /* Handler */
-    // ...
+    /* Select */
+    uint32_t idx = db_uid2id(uid);
+    db_item_t select_item;
+    uint8_t *ftr = (uint8_t *)item;
+    int len;
 
+    // Check if idx overflow
+    if (idx >= DB_FACE_MAX_NUM)
+    {
+        err = MF_ERR_PARAM;
+        goto _exit;
+    }
+
+    // Check if idx is not set
+    if (_get_header_index_bit(&private->header, idx) == 0)    
+    {
+        err = MF_ERR_DB;
+        goto _exit;
+    }
+
+    // Read
+    uint32_t address = idx * DB_ITEM_MAX_SIZE + DB_HEADER_MAX_SIZE;
+    len = db_read(address, (uint8_t *)&select_item, sizeof(db_item_t));
+    if (len != sizeof(db_item_t))
+    {
+        err = MF_ERR_DB;
+        goto _exit;
+    }
+    memcpy(ftr, select_item.ftr, DB_FTR_SIZE);
+
+_exit:
     /* Unlock */
     if (db->unlock)
         db->unlock();
@@ -348,15 +379,49 @@ static db_err_t _facedb_update(uint8_t *uid, void* item)
 {
     db_err_t err = MF_OK;
     db_t *db = (db_t *)&facedb;
-    if (!db->is_init)    return MF_ERR_UNINIT;
+    facedb_private_t *private = (facedb_private_t *)db->private;
 
+    if (!db->is_init)    return MF_ERR_UNINIT;
+    if (!uid || !item)  return MF_ERR_PARAM;
     /* Lock */
     if (db->lock)
         db->lock();
 
-    /* Handler */
-    // ...
+    /* Update */
+    uint8_t *ftr = (uint8_t *)item;
+    db_item_t db_item;
+    uint32_t idx;
+    int len;
+    memcpy(db_item.uid, uid, DB_UID_SIZE);
+    memcpy(db_item.ftr, ftr, DB_FTR_SIZE);
+    idx = db_uid2id(db_item.uid);
 
+    // Check if idx overflow
+    if (idx >= DB_FACE_MAX_NUM)
+    {
+        err = MF_ERR_PARAM;
+        goto _exit;
+    }
+
+    // Save
+    uint32_t address = idx * DB_ITEM_MAX_SIZE + DB_HEADER_MAX_SIZE;
+    len = db_write(address, (uint8_t *)&db_item, sizeof(db_item_t));
+    if (len != sizeof(db_item_t))
+    {
+        err = MF_ERR_DB;
+        goto _exit;
+    }
+
+    // Update header
+    err = _update_header(&private->header, 1, idx);
+    if (MF_OK != err)
+    {
+        if (db->unlock)
+            db->unlock();
+        return err;
+    }
+
+_exit:
     /* Unlock */
     if (db->unlock)
         db->unlock();
@@ -368,14 +433,16 @@ static db_err_t _facedb_iterate_init(void)
 {
     db_err_t err = MF_OK;
     db_t *db = (db_t *)&facedb;
+    facedb_private_t *private = (facedb_private_t *)db->private;
     if (!db->is_init)    return MF_ERR_UNINIT;
 
     /* Lock */
     if (db->lock)
         db->lock();
 
-    /* Handler */
-    // ...
+    /* Iterate init */
+    private->iterate_run = 1;
+    private->iterate_idx = 0;
 
     /* Unlock */
     if (db->unlock)
@@ -384,19 +451,48 @@ static db_err_t _facedb_iterate_init(void)
     return err;
 }
 
-static int _facedb_iterate()
+static int _facedb_iterate(uint8_t *uid, void *item)
 {
     db_err_t err = MF_OK;
     db_t *db = (db_t *)&facedb;
+    facedb_private_t *private = (facedb_private_t *)db->private;
     if (!db->is_init)    return MF_ERR_UNINIT;
+    if (!private->iterate_run)  return MF_ERR_UNINIT;
 
     /* Lock */
     if (db->lock)
         db->lock();
 
-    /* Handler */
-    // ...
+    /* Iterate */
+    uint32_t idx;
+    uint32_t tmp = private->header.index[private->iterate_idx / 32];
+    db_item_t iterate_item;
+    uint8_t *ftr = (uint8_t *)item;
+    int len;
+    while (!_get_header_index_bit(&private->header, private->iterate_idx))
+    {
+        private->iterate_idx ++;
+        if (private->iterate_idx >= DB_FACE_MAX_NUM)
+        {
+            err = MF_OVER;
+            goto _exit;
+        }
+    }
 
+    idx = private->iterate_idx;
+    private->iterate_idx ++;
+    memcpy(uid, db_id2uid(idx), DB_UID_SIZE);
+    uint32_t address = idx * DB_ITEM_MAX_SIZE + DB_HEADER_MAX_SIZE;
+    len = db_read(address, (uint8_t *)&iterate_item, sizeof(db_item_t));
+    if (len != sizeof(db_item_t))
+    {
+        err = MF_ERR_DB;
+        goto _exit;
+    }
+    memcpy(ftr, iterate_item.ftr, DB_FTR_SIZE);
+
+    err = MF_CONTINUE;
+_exit:
     /* Unlock */
     if (db->unlock)
         db->unlock();
@@ -404,7 +500,7 @@ static int _facedb_iterate()
     return err;
 }
 
-static int _facedb_num()
+static int _facedb_num(void)
 {
     db_err_t err = MF_OK;
     db_t *db = (db_t *)&facedb;
