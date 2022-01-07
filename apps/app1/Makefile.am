@@ -4,7 +4,7 @@ app1_SOURCES= main.c
 
 # Link libcommon
 SUBDIRS = ../../libs/common
-app1_CPPFLAGS = -I$(top_srcdir)/libs/common
+app1_CPPFLAGS = -I$(top_srcdir)/libs/common 
 app1_LDADD = $(top_srcdir)/libs/common/libcommon.a
 
 # Link libSDL2
@@ -13,7 +13,7 @@ LIBS    = -lSDL2
 
 # Link libdb
 SUBDIRS += ../../libs/db
-app1_CPPFLAGS += -I(top_srcdir)/libs/db
+app1_CPPFLAGS += -I$(top_srcdir)/libs/db/inc
 app1_LDADD = $(top_srcdir)/libs/db/libdb.a
 
 # flags of libs

@@ -12,7 +12,7 @@
  *  Sector size         = DB_SECTOR_SIZE
  *  Head size           = sizeof(db_head_t)
  *  None size           = DB_SECTOR_SIZE - sizeof(db_head_t)
- *  All face info size  = DB_FACE_MAX_NUM * sizeof(db_item_t)
+ *  All face info size  = DB_FACE_MAX_NUM * 256(Valid size is sizeof(db_item_t))
  *  ___________________________________________________________________________
  * |      Sector0      |      Sector1      |      ...      |      SectorN      |
  * |___________________|___________________|_______________|___________________|
@@ -22,6 +22,7 @@
 /* face info config */
 #define DB_UID_SIZE         (16)
 #define DB_FTR_SIZE         (196)
+#define DB_ITEM_MAX_SIZE    (256)
 #define DB_FACE_MAX_NUM     (2048)
 
 /* Head config */
@@ -31,8 +32,9 @@
 /* Flash config */
 #define DB_SECTOR_SIZE      (4096)
 #define DB_START_ADDRESS    (0x0)
-#define DB_ADDERSS_SIZE     (DB_FACE_MAX_NUM * (DB_FTR_SIZE + DB_UID_SIZE) + DB_SECTOR_SIZE)
-#define DB_ADDRESS_MAX_SIZE (0x6B000)
+#define DB_ADDERSS_SIZE     (DB_FACE_MAX_NUM * 256 + DB_SECTOR_SIZE)
+#define DB_ADDRESS_MAX_SIZE (0x81000)
+
 typedef enum
 {
     DB_STA_OK = 0,
@@ -40,6 +42,12 @@ typedef enum
     DB_STA_FULL,
     DB_STA_MAX
 }db_status_t;
+
+typedef enum
+{
+    DB_TYPE_FACE = 0,
+    DB_TYPE_MAX
+}db_type_t;
 
 typedef enum
 {
@@ -94,5 +102,8 @@ typedef struct
 
 extern int db_write(uint32_t addr, uint8_t *data, int len);
 extern int db_read(uint32_t addr, uint8_t *data, int len);
+extern db_t db;
+
+db_err_t db_choose(db_type_t type);
 
 #endif /* __DB_H */

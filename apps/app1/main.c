@@ -1,5 +1,6 @@
 #include "common.h"
 #include "SDL2/SDL.h"
+#include "db.h"
 
 static void __attribute__((constructor)) sdl2_show_bmp(void)
 {
@@ -92,6 +93,92 @@ static void __attribute__((constructor)) sdl2_show_video(void)
 
     SDL_Quit();
 #endif
+}
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#define DISK_FILE_SIZE  (1024 * 1024 * 5) 
+const char *disk_file = "temp";
+
+int disk_initialize (void)
+{
+    if (access(disk_file, F_OK))
+    {
+        LOGI("Create file %s\n", disk_file);
+        creat(disk_file, 0666);
+    }
+
+	return 0;
+}
+
+int db_read(uint32_t address, uint8_t *buff, int cnt)
+{
+    if (!access(disk_file, F_OK))
+    {
+        int fd = open(disk_file, O_RDWR);
+        if (fd)
+        {
+            lseek(fd, address, SEEK_SET);
+            int len = read(fd, buff, cnt);
+            perror("read file");
+            LOGI("Read address:%#x, cnt:%d\n", address, cnt);
+            close(fd);
+            return len;
+        }
+    }
+
+	return 0;
+}
+
+int db_write(uint32_t address, uint8_t *buff, int cnt)
+{
+    if (!access(disk_file, F_OK))
+    {
+        int fd = open(disk_file, O_RDWR);
+        if (fd)
+        {
+            lseek(fd, address, SEEK_SET);
+            int len = write(fd, buff, cnt);
+            perror("write file");
+            LOGI("Write address:%#x, cnt:%d\n", address, cnt);
+            LOGHEX("Write data", buff, cnt);
+            close(fd);
+            return len;
+        }
+    }
+    
+	return 0;
+}
+
+static void __attribute__((constructor)) facedb_test(void)
+{
+#if 1
+    // Use file to test facedb
+    disk_initialize();
+
+#endif
+
+#if 1
+    LOGI("Facedb test!\n");
+
+    db_err_t err = MF_OK;
+    err = db_choose(DB_TYPE_FACE);
+    if (MF_OK != err) {LOGE("Error %d\n", err); exit(-1);}
+    
+    err = db.init();
+    if (MF_OK != err) {LOGE("Error %d\n", err); exit(-1);}
+
+    err = db.deinit();
+    if (MF_OK != err) {LOGE("Error %d\n", err); exit(-1);}
+
+#endif 
+}
+
+static void __attribute__((destructor)) exit_handler(void)
+{
+    LOGI("Exit!\n");
 }
 
 int main(void)

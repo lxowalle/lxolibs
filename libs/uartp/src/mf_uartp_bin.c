@@ -1288,7 +1288,7 @@ static mf_uartp_t mf_uartp_bin =
 /**
  * @brief Get uartp bin handle
 */
-mf_uartp_t *get_uartp_bin(void)
+mf_uartp_t *get_uartp_bin_handle(void)
 {
     return &mf_uartp_bin;
 }

@@ -6,6 +6,15 @@ static db_t facedb;
     #error "Flash size is too small for facedb!"
 #endif
 
+#if (DB_SECTOR_SIZE % DB_ITEM_MAX_SIZE != 0)
+    #error "The face item is not aligned with the sectors!"
+#endif
+
+#define idx2addr(idx) do{\
+    int item_per_sector = DB_SECTOR_SIZE / DB_ITEM_MAX_SIZE;\
+    (index / item_per_sector) * DB_SECTOR_SIZE + (index % item_per_sector)\
+}while(0)
+
 typedef struct
 {
     uint8_t need_init : 1;
@@ -30,6 +39,15 @@ static db_err_t _facedb_init(void)
     db->private = &private;
     
     /* Init database */
+    // Check item size
+    if (sizeof(db_item_t) > DB_ITEM_MAX_SIZE)
+    {
+        if (db->unlock)
+            db->unlock();
+        return MF_ERR_TODO;
+    }
+
+    // Read header info
     uint8_t head_sector[DB_SECTOR_SIZE] = {0};
     int len = db_read(DB_START_ADDRESS, (uint8_t *)&private.header, sizeof(private.header));
     if (len != sizeof(private.header))
@@ -39,7 +57,7 @@ static db_err_t _facedb_init(void)
         return MF_ERR_UNKNOWN;
     }
 
-    // Check sign
+    // Check sign for header
     if (private.header.sign != DB_HEAD_SIGN)
     {
         if (db->unlock)
@@ -47,7 +65,7 @@ static db_err_t _facedb_init(void)
         goto _need_init_head;
     }
 
-    // Check version
+    // Check version for header
     if (private.header.version != DB_HEAD_VERSION)
     {
         if (db->unlock)
@@ -55,7 +73,7 @@ static db_err_t _facedb_init(void)
         goto _need_init_head;
     }
 
-    // Check checksum
+    // Check checksum for header
     uint32_t checksum = private.header.version
                     + private.header.total
                     + private.header.sign;
@@ -74,10 +92,9 @@ static db_err_t _facedb_init(void)
     goto _need_not_init_head;
 
 _need_init_head:
-    private.header.total = 0;
+    memset(&private.header, 0, sizeof(private.header));
     private.header.sign = DB_HEAD_SIGN;
     private.header.version = DB_HEAD_VERSION;
-    memset(private.header.index, 0, sizeof(private.header.index) / sizeof(private.header.index[0]));
     private.header.checksum = private.header.sign
                             + private.header.version;   // Need not add total and index, because they are 0
     len = db_write(DB_START_ADDRESS, (uint8_t *)&private.header, sizeof(private.header));
@@ -283,4 +300,16 @@ static db_t facedb =
 db_t *get_facedb_handle(void)
 {
     return &facedb;
+}
+
+int __attribute__((weak)) db_write(uint32_t addr, uint8_t *data, int len)
+{
+    printf("Warnning, int(*db_write)(uint32_t addr,uint8_t *data,int len) not define for facedb!\n");
+    return len;
+}
+
+int __attribute__((weak)) db_read(uint32_t addr, uint8_t *data, int len)
+{
+    printf("Warnning, int(*db_read)(uint32_t addr,uint8_t *data,int len) not define for facedb!\n");
+    return len;
 }

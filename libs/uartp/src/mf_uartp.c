@@ -14,7 +14,7 @@ mf_err_t mf_uartp_choose(uartp_type_t type)
     switch (type)
     {
     case UARTP_TYPE_BIN:
-        memcpy(&mf_uartp, get_uartp_bin(), sizeof(mf_uartp));
+        memcpy(&mf_uartp, get_uartp_bin_handle(), sizeof(mf_uartp));
         err = MF_OK;
         break;
     default:
