@@ -122,8 +122,8 @@ int db_read(uint32_t address, uint8_t *buff, int cnt)
         {
             lseek(fd, address, SEEK_SET);
             int len = read(fd, buff, cnt);
-            perror("read file");
             LOGI("Read address:%#x, cnt:%d\n", address, cnt);
+            LOGHEX("Read data", buff, cnt);
             close(fd);
             return len;
         }
@@ -141,7 +141,6 @@ int db_write(uint32_t address, uint8_t *buff, int cnt)
         {
             lseek(fd, address, SEEK_SET);
             int len = write(fd, buff, cnt);
-            perror("write file");
             LOGI("Write address:%#x, cnt:%d\n", address, cnt);
             LOGHEX("Write data", buff, cnt);
             close(fd);
@@ -157,7 +156,6 @@ static void __attribute__((constructor)) facedb_test(void)
 #if 1
     // Use file to test facedb
     disk_initialize();
-
 #endif
 
 #if 1
@@ -169,6 +167,19 @@ static void __attribute__((constructor)) facedb_test(void)
     
     err = db.init();
     if (MF_OK != err) {LOGE("Error %d\n", err); exit(-1);}
+
+    LOGI("DB Insert\n");
+    uint32_t index = 2048;
+    uint8_t ftr[DB_FTR_SIZE];
+    memset(ftr, 0x55, sizeof(ftr));
+    err = db.insert(db_id2uid(index), &ftr);
+    if (MF_OK != err) {LOGW("Can't insert %d, err=%d\n", index, err); }
+    LOGI("Total face num: %d\n", db.num());
+
+    LOGI("DB Delete\n");
+    err = db.delete(db_id2uid(index));
+    if (MF_OK != err) {LOGW("Can't Delete %d, err=%d\n", index, err); }
+    LOGI("Total face num: %d\n", db.num());
 
     err = db.deinit();
     if (MF_OK != err) {LOGE("Error %d\n", err); exit(-1);}
