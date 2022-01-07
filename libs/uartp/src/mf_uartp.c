@@ -18,7 +18,7 @@ mf_err_t mf_uartp_choose(uartp_type_t type)
         err = MF_OK;
         break;
     default:
-        err = MF_ERR_UNDEFINE;
+        err = MF_ERR_UNINIT;
         break;
     }
 

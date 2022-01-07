@@ -26,6 +26,7 @@ AC_CONFIG_FILES([Makefile
                  apps/freertos-demo/demo0/Makefile
                  apps/template/Makefile
                  libs/common/Makefile
+                 libs/db/Makefile
                  libs/kalman/Makefile
                  libs/kalman/lib/Makefile
                  libs/kalman/test/Makefile

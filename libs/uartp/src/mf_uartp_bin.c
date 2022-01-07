@@ -1033,7 +1033,7 @@ static mf_err_t _uartp_init(void)
     mf_err_t err = MF_OK;
     mf_uartp_t *uartp = (mf_uartp_t *)&mf_uartp_bin;
 
-    if (uartp->is_init) return MF_ERR_REDEFINE;
+    if (uartp->is_init) return MF_ERR_REINIT;
     /* Init lock */
     // ...
 
@@ -1041,21 +1041,13 @@ static mf_err_t _uartp_init(void)
     if (uartp->lock)
         uartp->lock();
 
-    /* Init uart device */
+    /* Add private param */
     err = uartp_device_init();
     if (MF_OK != err) return err;
 
     /* Reset uartp param */
     static uartp_private_t private;
     uartp->private = &private;
-    if (!uartp->private) 
-    {
-        printf("Uartp have not private data\n");
-        return MF_ERR_TODO;
-    }
-
-    memset(private.recv_buff, 0, UARTP_FRAME_BUFFNUM * UARTP_FRAME_SIZE);
-    private.recv_cnt = 0;
     uartp->status = UARTP_IDEL;
 
     /* Init over */ 
@@ -1075,8 +1067,7 @@ static mf_err_t _uartp_deinit(void)
 {
     mf_err_t err = MF_OK;
     mf_uartp_t *uartp = (mf_uartp_t *)&mf_uartp_bin;
-    if (uartp == NULL)  return MF_ERR_PARAM;
-    if (!uartp->is_init) return MF_ERR_UNDEFINE;
+    if (!uartp->is_init) return MF_ERR_UNINIT;
 
     /* Lock */
     if (uartp->lock)
@@ -1113,8 +1104,7 @@ static mf_err_t _uartp_send(uint8_t *data, int len, int *real_len)
 {
     mf_err_t err = MF_OK;
     mf_uartp_t *uartp = (mf_uartp_t *)&mf_uartp_bin;
-    if (!uartp)  return MF_ERR_PARAM;
-    if (!uartp->is_init) return MF_ERR_UNDEFINE;
+    if (!uartp->is_init) return MF_ERR_UNINIT;
 
     /* Lock */
     if (uartp->lock)
@@ -1146,8 +1136,7 @@ static mf_err_t _uartp_recv(uint8_t *data, int len, int *real_len)
 {
     mf_err_t err = MF_OK;
     mf_uartp_t *uartp = (mf_uartp_t *)&mf_uartp_bin;
-    if (!uartp)  return MF_ERR_PARAM;
-    if (!uartp->is_init) return MF_ERR_UNDEFINE;
+    if (!uartp->is_init) return MF_ERR_UNINIT;
 
     /* Lock */
     if (uartp->lock)
@@ -1182,7 +1171,7 @@ static mf_err_t _uartp_send_ptl(int cmd, uint8_t *data, int len, int *real_len)
 {
     mf_err_t err = MF_OK;
     mf_uartp_t *uartp = (mf_uartp_t *)&mf_uartp_bin;
-    if (!uartp->is_init) return MF_ERR_UNDEFINE;
+    if (!uartp->is_init) return MF_ERR_UNINIT;
 
     /* Lock */
     if (uartp->lock)
@@ -1230,8 +1219,7 @@ static mf_err_t _uartp_loop(void)
 {
     mf_err_t err = MF_OK;
     mf_uartp_t *uartp = (mf_uartp_t *)&mf_uartp_bin;
-    if (!uartp)  return MF_ERR_PARAM;
-    if (!uartp->is_init) return MF_ERR_UNDEFINE;
+    if (!uartp->is_init) return MF_ERR_UNINIT;
 
     /* Lock */
     if (uartp->lock)
@@ -1257,8 +1245,7 @@ mf_err_t _uartp_control(int cmd, ...)
 {
     mf_err_t err = MF_OK;
     mf_uartp_t *uartp = (mf_uartp_t *)&mf_uartp_bin;
-    if (!uartp)  return MF_ERR_PARAM;
-    if (!uartp->is_init) return MF_ERR_UNDEFINE;
+    if (!uartp->is_init) return MF_ERR_UNINIT;
 
     /* Lock */
     if (uartp->lock)

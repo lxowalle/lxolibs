@@ -11,5 +11,10 @@ app1_LDADD = $(top_srcdir)/libs/common/libcommon.a
 app1_CPPFLAGS += -I/usr/include/SDL2
 LIBS    = -lSDL2
 
+# Link libdb
+SUBDIRS += ../../libs/db
+app1_CPPFLAGS += -I(top_srcdir)/libs/db
+app1_LDADD = $(top_srcdir)/libs/db/libdb.a
+
 # flags of libs
 # app1_LDFLAGS= -D_GNU_SOURCE
