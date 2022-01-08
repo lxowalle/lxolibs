@@ -50,7 +50,7 @@ static void __attribute__((constructor)) _start_handler(void)
     err = mf_uartp_choose(UARTP_TYPE_BIN);
     if (MF_OK != err)   {LOGE("uartp choose failed! reason: %s\n", mf_err_str(err)); exit(1);}
     err = mf_uartp.init();
-    if (MF_OK != err)   {LOGE("uartp choose failed! reason: %s\n", mf_err_str(err)); exit(1);}
+    if (MF_OK != err)   {LOGE("uartp init failed! reason: %s\n", mf_err_str(err)); exit(1);}
     res = xTaskCreate(uartp_irq_task, "uartp irq task", configMINIMAL_STACK_SIZE, NULL, 4, &uartp_irq_handle);
     if (pdPASS != res)  {LOGE("Create uartp irq task failed! res: %ld\n", res); exit(1);}
 
@@ -63,9 +63,9 @@ static void __attribute__((destructor)) _exit_handler(void)
     LOGI("exit handler!\n");
 }
 
-int main(void)
+int main(int argc, char const *argv[])
 {
-    LOGI("FreeRTOS Demo\n");
+    LOGI("FreeRTOS start scheduler\n");
 
 	vTaskStartScheduler();
 
@@ -78,7 +78,7 @@ void user_task0(void *param)
     BaseType_t res;
     while (1)
     {
-        printf("=>%d  cnt:%d\n", __LINE__, cnt ++);
+        LOGI("cnt:%d\n", cnt ++);
 
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -95,6 +95,19 @@ void uartp_irq_task(void *param)
 
         vTaskDelay(pdMS_TO_TICKS(50));
     }
+}
+
+void __attribute__((weak)) vAssertCalled( const char * const pcFileName,
+                    unsigned long ulLine )
+{
+    ( void ) ulLine;
+    ( void ) pcFileName;
+
+    taskENTER_CRITICAL();
+    LOGE("FreeRTOS Assert:file:%s line:%ld\n", pcFileName, ulLine);
+    taskEXIT_CRITICAL();
+
+    exit(-1);
 }
 
 void __attribute__((weak)) vApplicationGetIdleTaskMemory( StaticTask_t **ppxIdleTaskTCBBuffer,

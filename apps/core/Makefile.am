@@ -13,6 +13,5 @@ noinst_HEADERS          += include/sensor.h
 core_CPPFLAGS           = -Iinclude       
 
 # Link libs
-SUBDIRS                 = ../../libs/common
-core_CPPFLAGS           += -I$(top_srcdir)/libs/common
-core_LDADD              = $(top_srcdir)/libs/common/libcommon.a
+core_CPPFLAGS           += -I$(top_srcdir)/common
+core_LDADD              = $(top_srcdir)/common/libcommon.a

@@ -11,9 +11,8 @@ demo0_CPPFLAGS          += -I../../../third_party/FreeRTOS-Kernel/portable/Third
 LIBS                    = -lpthread
 
 # Link libcommon
-SUBDIRS                 += ../../../libs/common
-demo0_CPPFLAGS          += -I../../../libs/common
-demo0_LDADD             += ../../../libs/common/libcommon.a
+demo0_CPPFLAGS          += -I$(top_srcdir)/common
+demo0_LDADD             += $(top_srcdir)/common/libcommon.a
 
 # Link libuartp
 SUBDIRS                 += ../../../libs/uartp

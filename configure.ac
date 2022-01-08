@@ -25,7 +25,7 @@ AC_CONFIG_FILES([Makefile
                  apps/freertos-demo/Makefile
                  apps/freertos-demo/demo0/Makefile
                  apps/template/Makefile
-                 libs/common/Makefile
+                 common/Makefile
                  libs/db/Makefile
                  libs/db/test/Makefile
                  libs/kalman/Makefile
@@ -33,6 +33,7 @@ AC_CONFIG_FILES([Makefile
                  libs/kalman/test/Makefile
                  libs/libfatfs/source/Makefile
                  libs/liblinuxapi/src/Makefile
+                 libs/tests/Makefile
                  libs/uartp/Makefile
                  libs/uartp/test/Makefile
                  third_party/FreeRTOS-Kernel/Makefile])

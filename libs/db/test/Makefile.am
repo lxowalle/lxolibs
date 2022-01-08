@@ -10,6 +10,5 @@ noinst_HEADERS              = ../inc/db.h
 noinst_HEADERS              += ../inc/facedb.h
 
 # Link libcommon
-SUBDIRS = ../../common
-test_db_CPPFLAGS += -I$(top_srcdir)/libs/common 
-test_db_LDADD = $(top_srcdir)/libs/common/libcommon.a
+test_db_CPPFLAGS            += -I$(top_srcdir)/common 
+test_db_LDADD               = $(top_srcdir)/common/libcommon.a
