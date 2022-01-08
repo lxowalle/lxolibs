@@ -412,15 +412,6 @@ static db_err_t _facedb_update(uint8_t *uid, void* item)
         goto _exit;
     }
 
-    // Update header
-    err = _update_header(&private->header, 1, idx);
-    if (MF_OK != err)
-    {
-        if (db->unlock)
-            db->unlock();
-        return err;
-    }
-
 _exit:
     /* Unlock */
     if (db->unlock)

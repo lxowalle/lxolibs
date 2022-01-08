@@ -27,6 +27,7 @@ AC_CONFIG_FILES([Makefile
                  apps/template/Makefile
                  libs/common/Makefile
                  libs/db/Makefile
+                 libs/db/test/Makefile
                  libs/kalman/Makefile
                  libs/kalman/lib/Makefile
                  libs/kalman/test/Makefile
@@ -35,4 +36,6 @@ AC_CONFIG_FILES([Makefile
                  libs/uartp/Makefile
                  libs/uartp/test/Makefile
                  third_party/FreeRTOS-Kernel/Makefile])
+# AC_CONFIG_SUBDIRS([third_party/SDL
+#                    third_party/pjproject])
 AC_OUTPUT
