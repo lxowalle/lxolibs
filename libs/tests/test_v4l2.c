@@ -7,6 +7,110 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdlib.h>
+#include <signal.h>
+#include <SDL2/SDL.h>
+
+
+void handle_sigint( int signal )
+{
+    LOGI("Get exit signal!\n");
+    exit(0);
+}
+
+typedef struct
+{
+    SDL_Window *win;
+    SDL_Renderer *ren;
+    SDL_Texture *tet;
+    SDL_Rect sdlRect;
+}user_sdl_t;
+user_sdl_t user_sdl;
+
+#define SCREEN_WIDTH    (1000)
+#define SCREEN_HEIGHT   (1000)
+#define PIC_WIDTH       (600)
+#define PIC_HEIGHT      (750)
+
+static int sdl_init(void)
+{
+    user_sdl_t *sdl = (user_sdl_t *)&user_sdl;
+
+    SDL_Init(SDL_INIT_EVERYTHING);
+
+    sdl->win = SDL_CreateWindow("User", 0, 0, 
+                                SCREEN_WIDTH, SCREEN_HEIGHT, 
+                                SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+    if (sdl->win == NULL)    {LOGE("Error:%s\n", SDL_GetError());  return -1;}                    
+
+    sdl->ren = SDL_CreateRenderer(sdl->win, -1, 0);
+    if (sdl->ren == NULL)    {LOGE("Error:%s\n", SDL_GetError());  return -1;}
+
+    sdl->tet = SDL_CreateTexture(sdl->ren, SDL_PIXELFORMAT_IYUV, 
+                                SDL_TEXTUREACCESS_STREAMING, 
+                                PIC_WIDTH, PIC_HEIGHT);
+    if (sdl->tet == NULL)    {LOGE("Error:%s\n", SDL_GetError());  return -1;}
+
+    return 0;
+}
+
+static int sdl_deinit(void)
+{
+    user_sdl_t *sdl = (user_sdl_t *)&user_sdl;
+    if (sdl->tet)   SDL_DestroyTexture(sdl->tet);
+    if (sdl->ren)   SDL_DestroyRenderer(sdl->ren);
+    if (sdl->win)   SDL_DestroyWindow(sdl->win);
+    SDL_Quit();
+
+    return 0;
+}
+
+static void __attribute__((constructor)) sdl2_show_video(void)
+{
+    signal( SIGINT, handle_sigint );
+#if 0
+    LOGI("SDL2 show video!\n");
+
+    int res = 0;
+    const int bpp = 12;
+    uint8_t buff[PIC_WIDTH * PIC_HEIGHT * bpp / 8];
+
+    user_sdl_t *sdl = (user_sdl_t *)&user_sdl;
+
+    res = sdl_init();
+    if (res < 0)    {LOGE("Error:%s\n", SDL_GetError());  exit(0);}
+
+    FILE *fp = NULL;
+    fp = fopen("assets/full.yuv", "rb+");
+    if (fp == NULL) {perror("Can not open file"); exit(-1);}
+
+    SDL_Rect sdlRect;
+    int x = 0;
+    while (1)
+    {
+        fseek(fp, 0, SEEK_SET);
+        fread(buff, 1, PIC_HEIGHT * PIC_WIDTH * bpp / 8, fp);
+        SDL_UpdateTexture(sdl->tet, NULL, buff, PIC_WIDTH);
+
+        x ++;
+        if (x > SCREEN_WIDTH) x = 0;
+        sdlRect.x = x;
+        sdlRect.y = 0;
+        sdlRect.w = PIC_WIDTH;
+        sdlRect.h = PIC_HEIGHT;
+
+        SDL_RenderClear(sdl->ren);
+        SDL_RenderCopy(sdl->ren, sdl->tet, NULL, &sdlRect);
+        SDL_RenderPresent(sdl->ren);
+
+        SDL_Delay(10);
+    }
+
+    fclose(fp);
+
+    res = sdl_deinit();
+    if (res < 0)    {LOGE("Error:%s\n", SDL_GetError());  exit(0);}
+#endif
+}
 
 #define TRUE            (1)
 #define FALSE           (0)
@@ -97,8 +201,8 @@ int v4l2_init()
     //查看及设置当前格式
     printf("set fmt...\n");
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB32; //jpg格式
-    //fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;//yuv格式
+    // fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB32; //jpg格式
+    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;//yuv格式
 
     fmt.fmt.pix.height = IMAGEHEIGHT;
     fmt.fmt.pix.width = IMAGEWIDTH;
@@ -221,7 +325,6 @@ int v4l2_frame_process()
     ioctl(fd, VIDIOC_STREAMON, &type);
     
 
-
     //出队，处理，写入yuv文件，入队，循环进行
     int loop = 0;
     while(loop < 15)
@@ -237,28 +340,39 @@ int v4l2_frame_process()
             cur_time = buffers[n_buffers].timestamp;
             extra_time = cur_time - last_time;
             last_time = cur_time;
-            printf("time_deta:%lld\n\n",extra_time);
+            printf("time_deta:%lld ms\n\n",extra_time / 1000);
             printf("buf_len:%d\n",buffers[n_buffers].length);
 
             //处理数据只是简单写入文件，名字以loop的次数和帧缓冲数目有关
-            printf("grab image data OK\n");
-            memset(file_name,0,sizeof(file_name));
-            memset(index_str,0,sizeof(index_str));
-            sprintf(index_str,"%d",loop*4+n_buffers);
-            strcpy(file_name,IMAGE);
-            strcat(file_name,index_str);
-            strcat(file_name,".jpg");
+            // printf("grab image data OK\n");
+            // memset(file_name,0,sizeof(file_name));
+            // memset(index_str,0,sizeof(index_str));
+            // sprintf(index_str,"%d",loop*4+n_buffers);
+            // strcpy(file_name,IMAGE);
+            // strcat(file_name,index_str);
+            // strcat(file_name,".jpg");
             //strcat(file_name,".yuv");
-            FILE *fp2 = fopen(file_name, "wb");
-            if(!fp2)
-            {
-                printf("open %s error\n",file_name);
-                return(FALSE);
-            }
-            fwrite(buffers[n_buffers].start, IMAGEHEIGHT*IMAGEWIDTH*2,1,fp2);
-            fclose(fp2);
+            // FILE *fp2 = fopen(file_name, "wb");
+            // if(!fp2)
+            // {
+            //     printf("open %s error\n",file_name);
+            //     return(FALSE);
+            // }
+            // fwrite(buffers[n_buffers].start, IMAGEHEIGHT*IMAGEWIDTH*2,1,fp2);
+            // fclose(fp2);
             printf("save %s OK\n",file_name);
 
+            // user_sdl_t *sdl = (user_sdl_t *)&user_sdl;
+            // SDL_Rect sdlRect;
+            // SDL_UpdateTexture(sdl->tet, NULL, buffers[n_buffers].start, PIC_WIDTH);
+            // sdlRect.x = 0;
+            // sdlRect.y = 0;
+            // sdlRect.w = PIC_WIDTH;
+            // sdlRect.h = PIC_HEIGHT;
+            // SDL_RenderClear(sdl->ren);
+            // SDL_RenderCopy(sdl->ren, sdl->tet, NULL, &sdlRect);
+            // SDL_RenderPresent(sdl->ren);
+            
             //入队循环
             ioctl(fd, VIDIOC_QBUF, &buf);       
         }
@@ -337,26 +451,47 @@ int v4l2_release()
 
 }*/
 
+__attribute__((constructor)) static void _start_handler(void)
+{
+    int res = sdl_init();
+    if (res < 0)    {LOGE("Error:%s\n", SDL_GetError());  exit(0);}
+
+    LOGI("start handler!\n");
+
+    printf("begin....\n");
+    sleep(1);
+
+    v4l2_init();
+    printf("init....\n");
+    sleep(1);
+
+    v4l2_mem_ops();
+    printf("malloc....\n");
+    sleep(1);
+
+#if 1
+    v4l2_frame_process();
+    printf("process....\n");
+    sleep(1);
+#endif
+
+    v4l2_release();
+    printf("release\n");
+    sleep(1);
+
+    res = sdl_deinit();
+    if (res < 0)    {LOGE("Error:%s\n", SDL_GetError());  exit(0);}
+}
+
+__attribute__((destructor)) static void _exit_handler(void)
+{
+    LOGI("exit handler!\n");
+}
+
 int main(int argc, char const *argv[])
 {
-    // printf("begin....\n");
-    // sleep(1);
-
-    // v4l2_init();
-    // printf("init....\n");
-    // sleep(1);
-
-    // v4l2_mem_ops();
-    // printf("malloc....\n");
-    // sleep(1);
-
-    // v4l2_frame_process();
-    // printf("process....\n");
-    // sleep(1);
-
-    // v4l2_release();
-    // printf("release\n");
-    // sleep(1);
+    LOGI("Hello world!\n");
+    
 
     return 0;
 }
