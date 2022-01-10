@@ -26,10 +26,10 @@ typedef struct
 }user_sdl_t;
 user_sdl_t user_sdl;
 
-#define SCREEN_WIDTH    (1000)
-#define SCREEN_HEIGHT   (1000)
-#define PIC_WIDTH       (600)
-#define PIC_HEIGHT      (750)
+#define SCREEN_WIDTH    (320)
+#define SCREEN_HEIGHT   (240)
+#define PIC_WIDTH       (320)
+#define PIC_HEIGHT      (240)
 
 static int sdl_init(void)
 {
@@ -64,62 +64,14 @@ static int sdl_deinit(void)
     return 0;
 }
 
-static void __attribute__((constructor)) sdl2_show_video(void)
-{
-    signal( SIGINT, handle_sigint );
-#if 0
-    LOGI("SDL2 show video!\n");
-
-    int res = 0;
-    const int bpp = 12;
-    uint8_t buff[PIC_WIDTH * PIC_HEIGHT * bpp / 8];
-
-    user_sdl_t *sdl = (user_sdl_t *)&user_sdl;
-
-    res = sdl_init();
-    if (res < 0)    {LOGE("Error:%s\n", SDL_GetError());  exit(0);}
-
-    FILE *fp = NULL;
-    fp = fopen("assets/full.yuv", "rb+");
-    if (fp == NULL) {perror("Can not open file"); exit(-1);}
-
-    SDL_Rect sdlRect;
-    int x = 0;
-    while (1)
-    {
-        fseek(fp, 0, SEEK_SET);
-        fread(buff, 1, PIC_HEIGHT * PIC_WIDTH * bpp / 8, fp);
-        SDL_UpdateTexture(sdl->tet, NULL, buff, PIC_WIDTH);
-
-        x ++;
-        if (x > SCREEN_WIDTH) x = 0;
-        sdlRect.x = x;
-        sdlRect.y = 0;
-        sdlRect.w = PIC_WIDTH;
-        sdlRect.h = PIC_HEIGHT;
-
-        SDL_RenderClear(sdl->ren);
-        SDL_RenderCopy(sdl->ren, sdl->tet, NULL, &sdlRect);
-        SDL_RenderPresent(sdl->ren);
-
-        SDL_Delay(10);
-    }
-
-    fclose(fp);
-
-    res = sdl_deinit();
-    if (res < 0)    {LOGE("Error:%s\n", SDL_GetError());  exit(0);}
-#endif
-}
-
 #define TRUE            (1)
 #define FALSE           (0)
 
 #define FILE_VIDEO      "/dev/video0"
 #define IMAGE           "./assets/demo"
 
-#define IMAGEWIDTH      640
-#define IMAGEHEIGHT     480
+#define IMAGEWIDTH      320
+#define IMAGEHEIGHT     240
 
 #define FRAME_NUM       4
 
@@ -197,12 +149,21 @@ int v4l2_init()
         printf("support format RGB32\n");
     }
 
+    fmt_test.fmt.pix.pixelformat=V4L2_PIX_FMT_YUYV;
+    if(ioctl(fd,VIDIOC_TRY_FMT,&fmt_test)==-1)
+    {
+        printf("not support format YUV422!\n");      
+    }
+    else
+    {
+        printf("support format YUV422\n");
+    }
 
     //查看及设置当前格式
     printf("set fmt...\n");
     fmt.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    // fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB32; //jpg格式
-    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;//yuv格式
+    fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_RGB32; //jpg格式
+    // fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;//yuv格式
 
     fmt.fmt.pix.height = IMAGEHEIGHT;
     fmt.fmt.pix.width = IMAGEWIDTH;
@@ -304,7 +265,7 @@ int v4l2_mem_ops()
 }
 
 
-
+#include "SDL2/SDL_image.h"
 int v4l2_frame_process()
 {
     unsigned int n_buffers;
@@ -327,7 +288,7 @@ int v4l2_frame_process()
 
     //出队，处理，写入yuv文件，入队，循环进行
     int loop = 0;
-    while(loop < 15)
+    while(1)
     {
         for(n_buffers = 0; n_buffers < FRAME_NUM; n_buffers++)
         {
@@ -343,7 +304,8 @@ int v4l2_frame_process()
             printf("time_deta:%lld ms\n\n",extra_time / 1000);
             printf("buf_len:%d\n",buffers[n_buffers].length);
 
-            //处理数据只是简单写入文件，名字以loop的次数和帧缓冲数目有关
+#if 0
+            /* 处理数据只是简单写入文件，名字以loop的次数和帧缓冲数目有关 */
             // printf("grab image data OK\n");
             // memset(file_name,0,sizeof(file_name));
             // memset(index_str,0,sizeof(index_str));
@@ -351,7 +313,7 @@ int v4l2_frame_process()
             // strcpy(file_name,IMAGE);
             // strcat(file_name,index_str);
             // strcat(file_name,".jpg");
-            //strcat(file_name,".yuv");
+            // // strcat(file_name,".yuv");
             // FILE *fp2 = fopen(file_name, "wb");
             // if(!fp2)
             // {
@@ -360,19 +322,27 @@ int v4l2_frame_process()
             // }
             // fwrite(buffers[n_buffers].start, IMAGEHEIGHT*IMAGEWIDTH*2,1,fp2);
             // fclose(fp2);
-            printf("save %s OK\n",file_name);
+            // printf("save %s OK\n",file_name);
+#else
+            user_sdl_t *sdl = (user_sdl_t *)&user_sdl;
+            SDL_RWops *dst = SDL_RWFromMem(buffers[n_buffers].start, buffers[n_buffers].length);
+            if (!dst)
+            {
+                LOGE("SDL_RWFromFile failed\n");
+            }
+            SDL_Surface *sur = IMG_LoadJPG_RW(dst);
+            if (!sur)
+            {
+                LOGE("IMG_LoadJPG_RW failed\n");
+            }
+            SDL_Texture *tet = SDL_CreateTextureFromSurface(sdl->ren, sur);
+            SDL_FreeRW(dst);
+            SDL_FreeSurface(sur);
 
-            // user_sdl_t *sdl = (user_sdl_t *)&user_sdl;
-            // SDL_Rect sdlRect;
-            // SDL_UpdateTexture(sdl->tet, NULL, buffers[n_buffers].start, PIC_WIDTH);
-            // sdlRect.x = 0;
-            // sdlRect.y = 0;
-            // sdlRect.w = PIC_WIDTH;
-            // sdlRect.h = PIC_HEIGHT;
-            // SDL_RenderClear(sdl->ren);
-            // SDL_RenderCopy(sdl->ren, sdl->tet, NULL, &sdlRect);
-            // SDL_RenderPresent(sdl->ren);
-            
+            SDL_RenderClear(sdl->ren);
+            SDL_RenderCopy(sdl->ren, tet, NULL, NULL);
+            SDL_RenderPresent(sdl->ren);
+#endif
             //入队循环
             ioctl(fd, VIDIOC_QBUF, &buf);       
         }
@@ -450,6 +420,55 @@ int v4l2_release()
     }
 
 }*/
+
+
+static void __attribute__((constructor)) sdl2_show_video(void)
+{
+    signal( SIGINT, handle_sigint );
+#if 0
+    LOGI("SDL2 show video!\n");
+
+    int res = 0;
+    const int bpp = 12;
+    uint8_t buff[PIC_WIDTH * PIC_HEIGHT * bpp / 8];
+
+    user_sdl_t *sdl = (user_sdl_t *)&user_sdl;
+
+    res = sdl_init();
+    if (res < 0)    {LOGE("Error:%s\n", SDL_GetError());  exit(0);}
+
+    FILE *fp = NULL;
+    fp = fopen("assets/demo44.jpg", "rb+");
+    if (fp == NULL) {perror("Can not open file"); exit(-1);}
+
+    SDL_Rect sdlRect;
+    int x = 0;
+    while (1)
+    {
+        fseek(fp, 0, SEEK_SET);
+        fread(buff, 1, PIC_HEIGHT * PIC_WIDTH * bpp / 8, fp);
+        SDL_UpdateTexture(sdl->tet, NULL, buff, PIC_WIDTH);
+
+        x ++;
+        if (x > SCREEN_WIDTH) x = 0;
+        sdlRect.x = x;
+        sdlRect.y = 0;
+        sdlRect.w = PIC_WIDTH;
+        sdlRect.h = PIC_HEIGHT;
+
+        SDL_RenderClear(sdl->ren);
+        SDL_RenderCopy(sdl->ren, sdl->tet, NULL, &sdlRect);
+        SDL_RenderPresent(sdl->ren);
+
+        SDL_Delay(10);
+    }
+
+    fclose(fp);
+
+    res = sdl_deinit();
+    if (res < 0)    {LOGE("Error:%s\n", SDL_GetError());  exit(0);}
+#endif
+}
 
 __attribute__((constructor)) static void _start_handler(void)
 {
