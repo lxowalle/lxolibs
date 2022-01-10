@@ -1,1 +1,1 @@
-SUBDIRS = demo0
+SUBDIRS = sipeed_808

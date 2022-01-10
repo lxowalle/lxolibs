@@ -23,7 +23,7 @@ AC_CONFIG_FILES([Makefile
                  apps/app1/Makefile
                  apps/core/Makefile
                  apps/freertos-demo/Makefile
-                 apps/freertos-demo/demo0/Makefile
+                 apps/freertos-demo/sipeed_808/Makefile
                  apps/template/Makefile
                  common/Makefile
                  libs/db/Makefile
