@@ -1,10 +1,10 @@
 bin_PROGRAMS            = demo0
 demo0_SOURCES           = main.c 
-demo0_SOURCES           += use_sdl2_show_v4l2.c
 demo0_CPPFLAGS          = -I.
 
 # Object vi
 demo0_SOURCES           += vi/vi.c 
+demo0_SOURCES           += vi/use_sdl2_show_v4l2.c
 demo0_CPPFLAGS          += -Ivi
 
 SUBDIRS                 = ../../../third_party/FreeRTOS-Kernel
