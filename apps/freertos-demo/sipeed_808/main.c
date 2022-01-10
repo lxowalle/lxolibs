@@ -3,6 +3,7 @@
 #include "task.h"
 #include "mf_uartp.h"
 #include "use_sdl2_show_v4l2.h"
+#include "vi.h"
 
 typedef struct
 {
@@ -38,10 +39,14 @@ const char *mf_err_str(mf_err_t type)
 }
 
 static TaskHandle_t user_handle0 = NULL;
-void user_task0(void *param);
-
 static TaskHandle_t uartp_irq_handle = NULL;
+static TaskHandle_t video_handle = NULL;
+static TaskHandle_t use_vi_data_handle = NULL;
+
+void user_task0(void *param);
 void uartp_irq_task(void *param);
+void vi_task(void *param);
+void use_vi_data_task(void *param);
 
 void handle_sigint( int signal )
 {
@@ -65,6 +70,18 @@ static void __attribute__((constructor)) _start_handler(void)
 
     res = xTaskCreate(user_task0, "user task0", configMINIMAL_STACK_SIZE, (void *)1, 3, &user_handle0);
     if (pdPASS != res)  {LOGE("Create user task0 failed! res: %ld\n", res); exit(1);}
+#if 0
+    err = vi_choose(VI_TYPE_USB_CAM);
+    if (MF_OK != err)   {LOGE("vi choose failed!\n"); exit(1);}
+    err = vi.init(VI_FORMAT_JPEG, 320, 240);
+    if (MF_OK != err)   {LOGE("vi init failed!\n"); exit(1);}
+
+    res = xTaskCreate(vi_task, "vi task", configMINIMAL_STACK_SIZE, NULL, 5, &video_handle);
+    if (pdPASS != res)  {LOGE("Create vi task failed! res: %ld\n", res); exit(1);}
+
+    res = xTaskCreate(use_vi_data_task, "use vi data task", configMINIMAL_STACK_SIZE, NULL, 4, &use_vi_data_handle);
+    if (pdPASS != res)  {LOGE("Create vi task failed! res: %ld\n", res); exit(1);}
+#endif
 }
 
 static void __attribute__((constructor)) _show_video(void)
@@ -79,6 +96,8 @@ static void __attribute__((constructor)) _show_video(void)
 static void __attribute__((destructor)) _exit_handler(void)
 {
     LOGI("exit handler!\n");
+    if (vi.deinit)
+        vi.deinit();
 }
 
 int main(int argc, char const *argv[])
@@ -112,6 +131,116 @@ void uartp_irq_task(void *param)
         mf_uartp.loop();
 
         vTaskDelay(pdMS_TO_TICKS(50));
+    }
+}
+
+void snap_test(void *param)
+{
+    int buffer_len = 320 * 240 * 3;
+    uint8_t *buffer = malloc(buffer_len);
+    if (buffer == NULL)
+    {
+        LOGE("Mem flowover!\n");
+        exit(0);
+    }
+       
+    image_t image = 
+    {
+        .addr = buffer,
+        .w = 320,
+        .h = 240,
+        .pixel = 3
+    };
+    vi_err_t err = VI_OK;
+
+    user_sdl_t *sdl = (user_sdl_t *)get_sdl_handle();
+    static int cnt = 0;
+
+    err = vi.snap(0, &image);
+    if (err != VI_OK)   {return;}
+    
+    LOGI("Snap data, cnt:%d!\n", cnt ++);
+
+    SDL_RWops *dst = SDL_RWFromMem(buffer, 154189);
+    if (!dst)
+    {
+        LOGE("SDL_RWFromFile failed\n");
+    }
+    SDL_Surface *sur = IMG_LoadJPG_RW(dst);
+    if (!sur)
+    {
+        LOGE("IMG_LoadJPG_RW failed\n");
+    }
+    SDL_Texture *tet = SDL_CreateTextureFromSurface(sdl->ren, sur);
+    SDL_FreeRW(dst);
+    SDL_FreeSurface(sur);
+
+    SDL_RenderClear(sdl->ren);
+    SDL_RenderCopy(sdl->ren, tet, NULL, NULL);
+    SDL_RenderPresent(sdl->ren);
+
+    free(buffer);
+}
+
+void vi_task(void *param)
+{
+    vi_err_t err = VI_OK;
+    while (1)
+    {
+        // LOGI("VI TASK\n");
+        err = vi.loop();
+        // if (err != VI_OK)   {LOGW("vi loop error, err: %d!\n", err);}
+
+        // snap_test(NULL);
+        // vTaskDelay(pdMS_TO_TICKS(20));
+    }
+}
+
+void use_vi_data_task(void *param)
+{
+    int buffer_len = 320 * 240 * 3;
+    uint8_t *buffer = malloc(buffer_len);
+    if (buffer == NULL)
+    {
+        LOGE("Mem flowover!\n");
+        exit(0);
+    }
+       
+    image_t image = 
+    {
+        .addr = buffer,
+        .w = 320,
+        .h = 240,
+        .pixel = 3
+    };
+    vi_err_t err = VI_OK;
+
+    user_sdl_t *sdl = (user_sdl_t *)get_sdl_handle();
+    int cnt = 0;
+    while (1)
+    {
+        vTaskDelay(pdMS_TO_TICKS(30));
+
+        // err = vi.snap(0, &image);
+        // if (err != VI_OK)   {LOGI("No data, cnt:%d!\n", cnt ++); continue;}
+        
+        // SDL_RWops *dst = SDL_RWFromMem(buffer, 154189);
+        // if (!dst)
+        // {
+        //     LOGE("SDL_RWFromFile failed\n");
+        // }
+        // SDL_Surface *sur = IMG_LoadJPG_RW(dst);
+        // if (!sur)
+        // {
+        //     LOGE("IMG_LoadJPG_RW failed\n");
+        // }
+        // SDL_Texture *tet = SDL_CreateTextureFromSurface(sdl->ren, sur);
+        // SDL_FreeRW(dst);
+        // SDL_FreeSurface(sur);
+
+        // SDL_RenderClear(sdl->ren);
+        // SDL_RenderCopy(sdl->ren, tet, NULL, NULL);
+        // SDL_RenderPresent(sdl->ren);
     }
 }
 

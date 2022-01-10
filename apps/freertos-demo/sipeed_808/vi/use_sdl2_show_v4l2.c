@@ -1,4 +1,5 @@
 #include "use_sdl2_show_v4l2.h"
+#include "vi.h"
 #include "common.h"
 
 user_sdl_t user_sdl;
@@ -49,7 +50,7 @@ static int sdl_deinit(void)
 #define TRUE            (0)
 #define FALSE           (-1)
 
-#define FILE_VIDEO      "/dev/video0"
+#define FILE_VIDEO      "/dev/video1"
 #define IMAGE           "./assets/demo"
 
 #define IMAGEWIDTH      320
@@ -257,14 +258,14 @@ static int v4l2_frame_process()
     long long int cur_time = 0;
     long long int last_time = 0;
 
-    //入队和开启采集
-    for (n_buffers = 0; n_buffers < FRAME_NUM; n_buffers++)
-    {
-        buf.index = n_buffers;
-        ioctl(fd, VIDIOC_QBUF, &buf);
-    }
-    type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-    ioctl(fd, VIDIOC_STREAMON, &type);
+    // //入队和开启采集
+    // for (n_buffers = 0; n_buffers < FRAME_NUM; n_buffers++)
+    // {
+    //     buf.index = n_buffers;
+    //     ioctl(fd, VIDIOC_QBUF, &buf);
+    // }
+    // type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    // ioctl(fd, VIDIOC_STREAMON, &type);
     
 
     //出队，处理，写入yuv文件，入队，循环进行
@@ -379,6 +380,16 @@ int use_sdl2_show_v4l2_init(void)
     printf("malloc....\n");
     sleep(1);
 
+    //入队和开启采集
+    unsigned int n_buffers;
+    enum v4l2_buf_type type;
+    for (n_buffers = 0; n_buffers < FRAME_NUM; n_buffers++)
+    {
+        buf.index = n_buffers;
+        ioctl(fd, VIDIOC_QBUF, &buf);
+    }
+    type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+    ioctl(fd, VIDIOC_STREAMON, &type);
     return 0;
 }
 
@@ -404,4 +415,82 @@ int use_sdl2_show_v4l2_loop_test(void)
     printf("process....\n");
     sleep(1);
 #endif
+}
+
+vi_err_t camera_init(uint16_t w, uint16_t h)
+{
+    vi_err_t err = VI_OK;
+
+    if (use_sdl2_show_v4l2_init() < 0)
+        err = VI_ERR_UNKNOWN;
+    
+    return err;
+}
+
+vi_err_t camera_deinit(void)
+{
+    vi_err_t err = VI_OK;
+
+    if (use_sdl2_show_v4l2_deinit() < 0)
+        err = VI_ERR_UNKNOWN;
+    
+    return err;
+}
+
+vi_err_t camera_snap(uint8_t *buffer, uint32_t buffer_max_size)
+{
+    vi_err_t err = VI_OK;
+
+    unsigned int n_buffers;
+    enum v4l2_buf_type type;
+    char file_name[100];
+    char index_str[10];
+    long long int extra_time = 0;
+    long long int cur_time = 0;
+    long long int last_time = 0;
+
+    while(1)
+    {
+    //出队，处理，写入yuv文件，入队，循环进行
+    for(n_buffers = 0; n_buffers < FRAME_NUM; n_buffers++)
+    {
+        //出队
+        buf.index = n_buffers;
+        ioctl(fd, VIDIOC_DQBUF, &buf);
+
+        //查看采集数据的时间戳之差，单位为微妙
+        buffers[n_buffers].timestamp = buf.timestamp.tv_sec*1000000+buf.timestamp.tv_usec;
+        cur_time = buffers[n_buffers].timestamp;
+        extra_time = cur_time - last_time;
+        last_time = cur_time;
+        printf("time_deta:%lld ms\n\n",extra_time / 1000);
+        printf("buf_len:%d\n",buffers[n_buffers].length);
+
+        // memcpy(buffer, buffers[n_buffers].start, buffers[n_buffers].length);
+
+        user_sdl_t *sdl = (user_sdl_t *)&user_sdl;
+        SDL_RWops *dst = SDL_RWFromMem(buffers[n_buffers].start, buffers[n_buffers].length);
+        if (!dst)
+        {
+            LOGE("SDL_RWFromFile failed\n");
+        }
+        SDL_Surface *sur = IMG_LoadJPG_RW(dst);
+        if (!sur)
+        {
+            LOGE("IMG_LoadJPG_RW failed\n");
+        }
+        SDL_Texture *tet = SDL_CreateTextureFromSurface(sdl->ren, sur);
+        SDL_FreeRW(dst);
+        SDL_FreeSurface(sur);
+
+        SDL_RenderClear(sdl->ren);
+        SDL_RenderCopy(sdl->ren, tet, NULL, NULL);
+        SDL_RenderPresent(sdl->ren);
+        
+        //入队循环
+        ioctl(fd, VIDIOC_QBUF, &buf);       
+    }
+    }
+
+    return err;
 }
