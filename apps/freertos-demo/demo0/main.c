@@ -2,6 +2,7 @@
 #include "common.h"
 #include "task.h"
 #include "../../../libs/uartp/inc/mf_uartp.h"
+#include "use_sdl2_show_v4l2.h"
 
 typedef struct
 {
@@ -42,9 +43,17 @@ void user_task0(void *param);
 static TaskHandle_t uartp_irq_handle = NULL;
 void uartp_irq_task(void *param);
 
+void handle_sigint( int signal )
+{
+    LOGI("Get exit signal!\n");
+    exit(0);
+}
 static void __attribute__((constructor)) _start_handler(void)
 {
     LOGI("start handler!\n");
+
+    signal( SIGINT, handle_sigint );
+
     BaseType_t res;
     mf_err_t err = MF_OK;
     err = mf_uartp_choose(UARTP_TYPE_BIN);
@@ -56,6 +65,15 @@ static void __attribute__((constructor)) _start_handler(void)
 
     res = xTaskCreate(user_task0, "user task0", configMINIMAL_STACK_SIZE, (void *)1, 3, &user_handle0);
     if (pdPASS != res)  {LOGE("Create user task0 failed! res: %ld\n", res); exit(1);}
+}
+
+static void __attribute__((constructor)) _show_video(void)
+{
+    use_sdl2_show_v4l2_init();
+
+    use_sdl2_show_v4l2_loop_test();
+
+    use_sdl2_show_v4l2_deinit();
 }
 
 static void __attribute__((destructor)) _exit_handler(void)
