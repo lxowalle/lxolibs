@@ -13,6 +13,10 @@ sipeed_808_SOURCES           += uartp/src/mf_uartp_bin.c
 sipeed_808_SOURCES           += uartp/src/mf_uartp.c 
 sipeed_808_CPPFLAGS          += -Iuartp/inc
 
+# Object mo
+sipeed_808_SOURCES           += mo/mo.c 
+sipeed_808_CPPFLAGS          += -Imo
+
 SUBDIRS                 = ../../../third_party/FreeRTOS-Kernel
 sipeed_808_LDADD             = ../../../third_party/FreeRTOS-Kernel/libfreertos.a
 sipeed_808_CPPFLAGS          += -I../../../third_party/FreeRTOS-Kernel
