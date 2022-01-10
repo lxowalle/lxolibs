@@ -1,7 +1,7 @@
 #include "FreeRTOS.h"
 #include "common.h"
 #include "task.h"
-#include "../../../libs/uartp/inc/mf_uartp.h"
+#include "mf_uartp.h"
 #include "use_sdl2_show_v4l2.h"
 
 typedef struct

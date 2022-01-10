@@ -7,6 +7,12 @@ sipeed_808_SOURCES           += vi/vi.c
 sipeed_808_SOURCES           += vi/use_sdl2_show_v4l2.c
 sipeed_808_CPPFLAGS          += -Ivi
 
+# Object uartp
+sipeed_808_SOURCES           += uartp/src/linux_uart.c 
+sipeed_808_SOURCES           += uartp/src/mf_uartp_bin.c 
+sipeed_808_SOURCES           += uartp/src/mf_uartp.c 
+sipeed_808_CPPFLAGS          += -Iuartp/inc
+
 SUBDIRS                 = ../../../third_party/FreeRTOS-Kernel
 sipeed_808_LDADD             = ../../../third_party/FreeRTOS-Kernel/libfreertos.a
 sipeed_808_CPPFLAGS          += -I../../../third_party/FreeRTOS-Kernel
@@ -18,11 +24,6 @@ LIBS                    = -lpthread
 # Link libcommon
 sipeed_808_CPPFLAGS          += -I$(top_srcdir)/common
 sipeed_808_LDADD             += $(top_srcdir)/common/libcommon.a
-
-# Link libuartp
-SUBDIRS                 += ../../../libs/uartp
-sipeed_808_CPPFLAGS          += -I../../../libs/uartp/inc
-sipeed_808_LDADD             += ../../../libs/uartp/libuartp.a
 
 # Link SDL2
 LIBS                    += -lSDL2 -lSDL2_image

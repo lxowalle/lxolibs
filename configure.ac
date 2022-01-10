@@ -34,8 +34,6 @@ AC_CONFIG_FILES([Makefile
                  libs/libfatfs/source/Makefile
                  libs/liblinuxapi/src/Makefile
                  libs/tests/Makefile
-                 libs/uartp/Makefile
-                 libs/uartp/test/Makefile
                  third_party/FreeRTOS-Kernel/Makefile])
 # AC_CONFIG_SUBDIRS([third_party/SDL
 #                    third_party/pjproject])
