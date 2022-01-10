@@ -50,13 +50,13 @@ static int sdl_deinit(void)
 #define TRUE            (0)
 #define FALSE           (-1)
 
-#define FILE_VIDEO      "/dev/video1"
+#define FILE_VIDEO      "/dev/video0"
 #define IMAGE           "./assets/demo"
 
 #define IMAGEWIDTH      320
 #define IMAGEHEIGHT     240
 
-#define FRAME_NUM       4
+#define FRAME_NUM       1
 
 static int fd;
 static struct v4l2_buffer buf;
@@ -445,9 +445,9 @@ vi_err_t camera_snap(uint8_t *buffer, uint32_t buffer_max_size)
     enum v4l2_buf_type type;
     char file_name[100];
     char index_str[10];
-    long long int extra_time = 0;
-    long long int cur_time = 0;
-    long long int last_time = 0;
+    static long long int extra_time = 0;
+    static long long int cur_time = 0;
+    static long long int last_time = 0;
 
     while(1)
     {
@@ -467,7 +467,7 @@ vi_err_t camera_snap(uint8_t *buffer, uint32_t buffer_max_size)
         printf("buf_len:%d\n",buffers[n_buffers].length);
 
         // memcpy(buffer, buffers[n_buffers].start, buffers[n_buffers].length);
-
+        
         user_sdl_t *sdl = (user_sdl_t *)&user_sdl;
         SDL_RWops *dst = SDL_RWFromMem(buffers[n_buffers].start, buffers[n_buffers].length);
         if (!dst)

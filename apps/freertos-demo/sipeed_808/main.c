@@ -70,27 +70,23 @@ static void __attribute__((constructor)) _start_handler(void)
 
     res = xTaskCreate(user_task0, "user task0", configMINIMAL_STACK_SIZE, (void *)1, 3, &user_handle0);
     if (pdPASS != res)  {LOGE("Create user task0 failed! res: %ld\n", res); exit(1);}
-#if 0
+#if 1
     err = vi_choose(VI_TYPE_USB_CAM);
     if (MF_OK != err)   {LOGE("vi choose failed!\n"); exit(1);}
     err = vi.init(VI_FORMAT_JPEG, 320, 240);
     if (MF_OK != err)   {LOGE("vi init failed!\n"); exit(1);}
 
-    res = xTaskCreate(vi_task, "vi task", configMINIMAL_STACK_SIZE, NULL, 5, &video_handle);
-    if (pdPASS != res)  {LOGE("Create vi task failed! res: %ld\n", res); exit(1);}
+    // res = xTaskCreate(vi_task, "vi task", configMINIMAL_STACK_SIZE, NULL, 5, &video_handle);
+    // if (pdPASS != res)  {LOGE("Create vi task failed! res: %ld\n", res); exit(1);}
 
-    res = xTaskCreate(use_vi_data_task, "use vi data task", configMINIMAL_STACK_SIZE, NULL, 4, &use_vi_data_handle);
-    if (pdPASS != res)  {LOGE("Create vi task failed! res: %ld\n", res); exit(1);}
+    // res = xTaskCreate(use_vi_data_task, "use vi data task", configMINIMAL_STACK_SIZE, NULL, 4, &use_vi_data_handle);
+    // if (pdPASS != res)  {LOGE("Create vi task failed! res: %ld\n", res); exit(1);}
 #endif
 }
 
 static void __attribute__((constructor)) _show_video(void)
 {
-    use_sdl2_show_v4l2_init();
-
-    use_sdl2_show_v4l2_loop_test();
-
-    use_sdl2_show_v4l2_deinit();
+    vi.loop();
 }
 
 static void __attribute__((destructor)) _exit_handler(void)
@@ -187,12 +183,10 @@ void vi_task(void *param)
     vi_err_t err = VI_OK;
     while (1)
     {
-        // LOGI("VI TASK\n");
         err = vi.loop();
-        // if (err != VI_OK)   {LOGW("vi loop error, err: %d!\n", err);}
+        if (err != VI_OK)   {LOGW("vi loop error, err: %d!\n", err);}
 
-        // snap_test(NULL);
-        // vTaskDelay(pdMS_TO_TICKS(20));
+        vTaskDelay(pdMS_TO_TICKS(10));
     }
 }
 
@@ -220,27 +214,6 @@ void use_vi_data_task(void *param)
     while (1)
     {
         vTaskDelay(pdMS_TO_TICKS(30));
-
-        // err = vi.snap(0, &image);
-        // if (err != VI_OK)   {LOGI("No data, cnt:%d!\n", cnt ++); continue;}
-        
-        // SDL_RWops *dst = SDL_RWFromMem(buffer, 154189);
-        // if (!dst)
-        // {
-        //     LOGE("SDL_RWFromFile failed\n");
-        // }
-        // SDL_Surface *sur = IMG_LoadJPG_RW(dst);
-        // if (!sur)
-        // {
-        //     LOGE("IMG_LoadJPG_RW failed\n");
-        // }
-        // SDL_Texture *tet = SDL_CreateTextureFromSurface(sdl->ren, sur);
-        // SDL_FreeRW(dst);
-        // SDL_FreeSurface(sur);
-
-        // SDL_RenderClear(sdl->ren);
-        // SDL_RenderCopy(sdl->ren, tet, NULL, NULL);
-        // SDL_RenderPresent(sdl->ren);
     }
 }
 
