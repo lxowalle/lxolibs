@@ -4,6 +4,7 @@ sipeed_808_CPPFLAGS          = -I.
 
 # Object vi
 sipeed_808_SOURCES           += vi/vi.c 
+sipeed_808_SOURCES           += vi/vi_dual_cam.c
 sipeed_808_SOURCES           += vi/use_sdl2_show_v4l2.c
 sipeed_808_CPPFLAGS          += -Ivi
 
