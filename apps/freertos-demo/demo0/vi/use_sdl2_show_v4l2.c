@@ -370,12 +370,12 @@ int use_sdl2_show_v4l2_init(void)
     sleep(1);
 
     res = v4l2_init();
-    if (res < 0)    {LOGE("Error:%s\n");  exit(0);}
+    if (res < 0)    {LOGE("Error\n");  exit(0);}
     printf("init....\n");
     sleep(1);
 
     res = v4l2_mem_ops();
-    if (res < 0)    {LOGE("Error:%s\n");  exit(0);}
+    if (res < 0)    {LOGE("Error\n");  exit(0);}
     printf("malloc....\n");
     sleep(1);
 
@@ -387,7 +387,7 @@ int use_sdl2_show_v4l2_deinit(void)
     int res = -1;
 
     res = v4l2_release();
-    if (res < 0)    {LOGE("Error:%s\n");  exit(0);}
+    if (res < 0)    {LOGE("Error\n");  exit(0);}
     printf("release\n");
     sleep(1);
 

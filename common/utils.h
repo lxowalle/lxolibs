@@ -4,6 +4,14 @@
 #include "stdint.h"
 #include "stdio.h"
 
+typedef struct
+{
+    uint8_t *addr;
+    uint16_t w;
+    uint16_t h;
+    uint16_t pixel;
+}image_t;
+
 /** 
  * @brief crc16 modbus校验 
  */

@@ -6,7 +6,7 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-
+#include "common.h"
 typedef enum
 {
     VI_TYPE_USB_CAM = 0,
@@ -48,6 +48,7 @@ typedef struct
     vi_err_t (*unlock)(void);
     vi_err_t (*loop)(void);
     vi_err_t (*control)(int cmd, ...);
+    vi_err_t (*snap)(int type, image_t **image);
 }vi_t;
 
 vi_t *get_vi_usb_cam_handle(void);

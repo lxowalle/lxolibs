@@ -5,19 +5,21 @@
 */
 typedef struct
 {
-    uint8_t buffer[128];
+    image_t image_buffer[2];
+    uint8_t buff_lock0 : 1;
+    uint8_t buff_lock1 : 1;
 }vi_private_t;
 
-static vi_t vi_usb_cam;
+static vi_t vi_cam;
 
 /**
  * @brief Init
  * @return
 */
-static vi_err_t _vi_usb_cam_init(void)
+static vi_err_t _vi_cam_init(void)
 {
     vi_err_t err = VI_OK;
-    vi_t *vi = (vi_t *)&vi_usb_cam;
+    vi_t *vi = (vi_t *)&vi_cam;
 
     if (vi->is_init) return VI_ERR_REINIT;
     /* Init lock */
@@ -30,7 +32,7 @@ static vi_err_t _vi_usb_cam_init(void)
     /* Add private param */
     static vi_private_t private;
     vi->private = &private;
-
+    
     /* Reset uartp param */
     vi->status = VI_STA_IDEL;
 
@@ -48,10 +50,10 @@ static vi_err_t _vi_usb_cam_init(void)
  * @brief Deinit
  * @return
 */
-static vi_err_t _vi_usb_cam_deinit(void)
+static vi_err_t _vi_cam_deinit(void)
 {
     vi_err_t err = VI_OK;
-    vi_t *vi = (vi_t *)&vi_usb_cam;
+    vi_t *vi = (vi_t *)&vi_cam;
     if (!vi->is_init) return VI_ERR_UNINIT;
 
     /* Lock */
@@ -77,7 +79,7 @@ static vi_err_t _vi_usb_cam_deinit(void)
  * @brief Lock
  * @return
 */
-static vi_err_t _vi_usb_cam_lock(void)
+static vi_err_t _vi_cam_lock(void)
 {
     // Lock
     vi_err_t err = VI_OK;
@@ -89,7 +91,7 @@ static vi_err_t _vi_usb_cam_lock(void)
  * @brief Unlock
  * @return
 */
-static vi_err_t _vi_usb_cam_unlock(void)
+static vi_err_t _vi_cam_unlock(void)
 {
     // Unlock
     vi_err_t err = VI_OK;
@@ -101,10 +103,10 @@ static vi_err_t _vi_usb_cam_unlock(void)
  * @brief Loop
  * @return
 */
-static vi_err_t _vi_usb_cam_loop(void)
+static vi_err_t _vi_cam_loop(void)
 {
     vi_err_t err = VI_OK;
-    vi_t *vi = (vi_t *)&vi_usb_cam;
+    vi_t *vi = (vi_t *)&vi_cam;
     if (!vi->is_init) return VI_ERR_UNINIT;
 
     /* Lock */
@@ -126,10 +128,10 @@ static vi_err_t _vi_usb_cam_loop(void)
  * @param [in]  argN
  * @return
 */
-static vi_err_t _vi_usb_cam_control(int cmd, ...)
+static vi_err_t _vi_cam_control(int cmd, ...)
 {
     vi_err_t err = VI_OK;
-    vi_t *vi = (vi_t *)&vi_usb_cam;
+    vi_t *vi = (vi_t *)&vi_cam;
     if (!vi->is_init) return VI_ERR_UNINIT;
 
     /* Lock */
@@ -153,24 +155,63 @@ static vi_err_t _vi_usb_cam_control(int cmd, ...)
     return err;
 }
 
-static vi_t vi_usb_cam = 
+/**
+ * @brief Snap
+ * @param [in]  type
+ * @return
+*/
+static vi_err_t _vi_cam_snap(int type, image_t **image)
+{
+    vi_err_t err = VI_OK;
+    vi_t *vi = (vi_t *)&vi_cam;
+    vi_private_t *private = (vi_private_t *)vi->private;
+    if (!vi->is_init) return VI_ERR_UNINIT;
+
+    /* Lock */
+    if (vi->lock)
+        vi->lock();
+
+    /* Snap */
+    if (private->buff_lock0)
+    {
+        *image = &private->image_buffer[0];
+    }
+    else if (private->buff_lock1)
+    {
+        *image = &private->image_buffer[1];
+    }
+    else
+    {
+        *image = NULL;
+        LOGW("Can't cam snap image, because cam buffer is locked!\n");
+    }
+
+    /* Unlock */
+    if (vi->unlock)
+        vi->unlock();
+
+    return err;
+}
+
+static vi_t vi_cam = 
 {
     .is_init = 0,
     .status = VI_STA_IDEL,
     .private = NULL,
-    .init = _vi_usb_cam_init,
-    .deinit = _vi_usb_cam_deinit,
-    .lock = _vi_usb_cam_lock,
-    .unlock = _vi_usb_cam_unlock,
-    .loop = _vi_usb_cam_loop,
-    .control = _vi_usb_cam_control
+    .init = _vi_cam_init,
+    .deinit = _vi_cam_deinit,
+    .lock = _vi_cam_lock,
+    .unlock = _vi_cam_unlock,
+    .loop = _vi_cam_loop,
+    .control = _vi_cam_control,
+    .snap = _vi_cam_snap
 };
 
 /**
  * @brief Get vi handle
  * @return Return a point of vi handle
 */
-vi_t *get_vi_usb_cam_handle(void)
+vi_t *get_vi_cam_handle(void)
 {
-    return &vi_usb_cam;
+    return &vi_cam;
 }
