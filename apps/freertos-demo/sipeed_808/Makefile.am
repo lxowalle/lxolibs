@@ -15,9 +15,9 @@ sipeed_808_SOURCES          += uartp/src/mf_uartp.c
 sipeed_808_CPPFLAGS         += -Iuartp/inc
 
 # Object ao
-sipeed_808_SOURCES          += ao/ao.c
-sipeed_808_SOURCES          += ao/ao_normal.c
-sipeed_808_CPPFLAGS         += -Iao
+sipeed_808_SOURCES          += aiao/aiao.c
+sipeed_808_SOURCES          += aiao/aiao_normal.c
+sipeed_808_CPPFLAGS         += -Iaiao
 
 # Link freertos
 SUBDIRS                     = ../../../third_party/FreeRTOS-Kernel
