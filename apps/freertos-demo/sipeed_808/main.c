@@ -100,7 +100,7 @@ static void __attribute__((constructor)) _show_video(void)
         err = vi.loop();
         if (err != VI_OK)   continue;
 
-        err = vi.snap(NULL, &snap_img);
+        err = vi.snap(0, &snap_img);
         if (err == VI_OK)
         {
             LOGI("Snap OK!\n"); 
@@ -194,7 +194,7 @@ void vi_task(void *param)
         if (err != VI_OK)   continue;
         portEXIT_CRITICAL();
 
-        err = vi.snap(NULL, &snap_img);
+        err = vi.snap(0, &snap_img);
         if (err == VI_OK)
         {
             LOGI("Snap OK!\n"); 
