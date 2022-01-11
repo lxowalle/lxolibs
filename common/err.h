@@ -3,7 +3,8 @@
 
 typedef enum
 {
-    ERR_NONE = 0,
+    OK = 0,
+    ERR_PARAM,
     ERR_UNKNOW,
     ERR_OVERFLOW,
     ERR_TODO,
