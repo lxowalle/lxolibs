@@ -4,6 +4,7 @@
 #include "mf_uartp.h"
 #include "use_sdl2_show_v4l2.h"
 #include "vi.h"
+#include "flow.h"
 
 typedef struct
 {

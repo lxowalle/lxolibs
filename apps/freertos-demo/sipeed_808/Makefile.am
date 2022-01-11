@@ -19,6 +19,11 @@ sipeed_808_SOURCES          += aiao/aiao.c
 sipeed_808_SOURCES          += aiao/aiao_normal.c
 sipeed_808_CPPFLAGS         += -Iaiao
 
+# Object flow
+sipeed_808_SOURCES          += flow/flow.c
+sipeed_808_SOURCES          += flow/flow_normal.c
+sipeed_808_CPPFLAGS         += -Iflow
+
 # Link freertos
 SUBDIRS                     = ../../../third_party/FreeRTOS-Kernel
 sipeed_808_LDADD            = ../../../third_party/FreeRTOS-Kernel/libfreertos.a
