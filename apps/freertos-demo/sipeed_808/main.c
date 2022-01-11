@@ -76,8 +76,8 @@ static void __attribute__((constructor)) _start_handler(void)
     err = vi.init(VI_FORMAT_JPEG, 320, 240);
     if (MF_OK != err)   {LOGE("vi init failed!\n"); exit(1);}
 
-    // res = xTaskCreate(vi_task, "vi task", configMINIMAL_STACK_SIZE, NULL, 5, &video_handle);
-    // if (pdPASS != res)  {LOGE("Create vi task failed! res: %ld\n", res); exit(1);}
+    res = xTaskCreate(vi_task, "vi task", configMINIMAL_STACK_SIZE, NULL, 5, &video_handle);
+    if (pdPASS != res)  {LOGE("Create vi task failed! res: %ld\n", res); exit(1);}
 
     // res = xTaskCreate(use_vi_data_task, "use vi data task", configMINIMAL_STACK_SIZE, NULL, 4, &use_vi_data_handle);
     // if (pdPASS != res)  {LOGE("Create vi task failed! res: %ld\n", res); exit(1);}
@@ -86,12 +86,54 @@ static void __attribute__((constructor)) _start_handler(void)
 
 static void __attribute__((constructor)) _show_video(void)
 {
-    vi.loop();
+    image_t snap_img;
+    snap_img.h = 240;
+    snap_img.w = 320;
+    snap_img.pixel = 3;
+    snap_img.addr = (uint8_t *)malloc(snap_img.w * snap_img.h * snap_img.pixel);
+    if (!snap_img.addr)
+    {
+        LOGE("MEMORY OVERFLOW!\n");
+        exit(-1);
+    }
+
+    vi_err_t err = VI_OK;
+    while(1)
+    {
+        vi.loop();
+
+        err = vi.snap(NULL, &snap_img);
+        if (err == VI_OK)
+        {
+            LOGI("Snap OK!\n"); 
+
+            user_sdl_t *sdl = (user_sdl_t *)get_sdl_handle();
+            SDL_RWops *dst = SDL_RWFromMem(snap_img.addr, 154189);
+            if (!dst)
+            {
+                LOGE("SDL_RWFromFile failed\n");
+            }
+            SDL_Surface *sur = IMG_LoadJPG_RW(dst);
+            if (!sur)
+            {
+                LOGE("IMG_LoadJPG_RW failed\n");
+            }
+            SDL_Texture *tet = SDL_CreateTextureFromSurface(sdl->ren, sur);
+            SDL_FreeRW(dst);
+            SDL_FreeSurface(sur);
+
+            SDL_RenderClear(sdl->ren);
+            SDL_RenderCopy(sdl->ren, tet, NULL, NULL);
+            SDL_RenderPresent(sdl->ren);
+        }
+    }
 }
 
 static void __attribute__((destructor)) _exit_handler(void)
 {
     LOGI("exit handler!\n");
+    if (mf_uartp.deinit)
+        mf_uartp.deinit();
     if (vi.deinit)
         vi.deinit();
 }
@@ -130,53 +172,6 @@ void uartp_irq_task(void *param)
     }
 }
 
-void snap_test(void *param)
-{
-    int buffer_len = 320 * 240 * 3;
-    uint8_t *buffer = malloc(buffer_len);
-    if (buffer == NULL)
-    {
-        LOGE("Mem flowover!\n");
-        exit(0);
-    }
-       
-    image_t image = 
-    {
-        .addr = buffer,
-        .w = 320,
-        .h = 240,
-        .pixel = 3
-    };
-    vi_err_t err = VI_OK;
-
-    user_sdl_t *sdl = (user_sdl_t *)get_sdl_handle();
-    static int cnt = 0;
-
-    err = vi.snap(0, &image);
-    if (err != VI_OK)   {return;}
-    
-    LOGI("Snap data, cnt:%d!\n", cnt ++);
-
-    SDL_RWops *dst = SDL_RWFromMem(buffer, 154189);
-    if (!dst)
-    {
-        LOGE("SDL_RWFromFile failed\n");
-    }
-    SDL_Surface *sur = IMG_LoadJPG_RW(dst);
-    if (!sur)
-    {
-        LOGE("IMG_LoadJPG_RW failed\n");
-    }
-    SDL_Texture *tet = SDL_CreateTextureFromSurface(sdl->ren, sur);
-    SDL_FreeRW(dst);
-    SDL_FreeSurface(sur);
-
-    SDL_RenderClear(sdl->ren);
-    SDL_RenderCopy(sdl->ren, tet, NULL, NULL);
-    SDL_RenderPresent(sdl->ren);
-
-    free(buffer);
-}
 
 void vi_task(void *param)
 {

@@ -55,7 +55,7 @@ typedef struct
 vi_err_t vi_choose(vi_type_t type);
 extern vi_err_t camera_init(uint16_t w, uint16_t h);
 extern vi_err_t camera_deinit(void);
-extern vi_err_t camera_snap(uint8_t *buffer, uint32_t buffer_max_size);
+extern vi_err_t camera_get_frame(uint8_t *buffer, uint32_t buffer_max_size);
 extern vi_t vi;
 
 #endif /* __VI_H */

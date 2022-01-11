@@ -55,7 +55,7 @@ static vi_err_t _vi_dual_cam_init(vi_format_t format, uint16_t w, uint16_t h)
         for (int i = 0; i < 2; i ++)
         {
             private.image_buffer[i].w = w;
-            private.image_buffer[i].w = h;
+            private.image_buffer[i].h = h;
             private.image_buffer[i].pixel = 2;
         }
     }
@@ -65,7 +65,7 @@ static vi_err_t _vi_dual_cam_init(vi_format_t format, uint16_t w, uint16_t h)
         for (int i = 0; i < 2; i ++)            // There has some error setting, just for test
         {
             private.image_buffer[i].w = w;
-            private.image_buffer[i].w = h;
+            private.image_buffer[i].h = h;
             private.image_buffer[i].pixel = 3;
         }
     }
@@ -236,7 +236,7 @@ static vi_err_t _vi_dual_cam_loop(void)
     // Snap
     vi_buffer_status_t curr_sta = private->image_buffer_status[snap_idx];
     private->image_buffer_status[snap_idx] = VI_BUFFER_BUSY;
-    err = camera_snap(private->image_buffer[snap_idx].addr, private->image_size);
+    err = camera_get_frame(private->image_buffer[snap_idx].addr, private->image_size);
     if (err == VI_OK)
     {
         private->image_buffer_status[snap_idx] = VI_BUFFER_FULL;
@@ -245,7 +245,7 @@ static vi_err_t _vi_dual_cam_loop(void)
     {
         private->image_buffer_status[snap_idx] = curr_sta;
     }
-
+    
 _exit:
     /* Unlock */
     if (vi->unlock)
@@ -325,8 +325,6 @@ static vi_err_t _vi_dual_cam_snap(int type, image_t *image)
         err = VI_ERR_PARAM;
         goto _exit;
     }
-    private->image_buffer_status[buffer_idx] = VI_BUFFER_BUSY;
-    private->buffer_index_in_use = buffer_idx;
 
     if (private->image_buffer[buffer_idx].h * private->image_buffer[buffer_idx].w * private->image_buffer[buffer_idx].pixel
         < image->h * image->w * image->pixel)
@@ -334,11 +332,11 @@ static vi_err_t _vi_dual_cam_snap(int type, image_t *image)
         err = VI_ERR_PARAM;
         goto _exit;
     }
-
-    memcpy(image->addr, &private->image_buffer[buffer_idx].addr, image->h * image->w * image->pixel);
-
+    private->image_buffer_status[buffer_idx] = VI_BUFFER_BUSY;
+    private->buffer_index_in_use = buffer_idx;
+    memcpy(image->addr, private->image_buffer[buffer_idx].addr, image->h * image->w * image->pixel);
     private->image_buffer_status[buffer_idx] = VI_BUFFER_IDLE;
-
+    
 _exit:
     /* Unlock */
     if (vi->unlock)
@@ -387,7 +385,7 @@ vi_err_t __attribute__((weak)) camera_deinit(void)
     return err;
 }
 
-vi_err_t __attribute__((weak)) camera_snap(uint8_t *buffer, uint32_t buffer_max_size)
+vi_err_t __attribute__((weak)) camera_get_frame(uint8_t *buffer, uint32_t buffer_max_size)
 {
     vi_err_t err = VI_OK;
 

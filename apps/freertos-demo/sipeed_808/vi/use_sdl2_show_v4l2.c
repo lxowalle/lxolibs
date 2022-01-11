@@ -368,17 +368,17 @@ int use_sdl2_show_v4l2_init(void)
     LOGI("start handler!\n");
 
     printf("begin....\n");
-    sleep(1);
+    // sleep(1);
 
     res = v4l2_init();
     if (res < 0)    {LOGE("Error\n");  exit(0);}
     printf("init....\n");
-    sleep(1);
+    // sleep(1);
 
     res = v4l2_mem_ops();
     if (res < 0)    {LOGE("Error\n");  exit(0);}
     printf("malloc....\n");
-    sleep(1);
+    // sleep(1);
 
     //入队和开启采集
     unsigned int n_buffers;
@@ -437,7 +437,7 @@ vi_err_t camera_deinit(void)
     return err;
 }
 
-vi_err_t camera_snap(uint8_t *buffer, uint32_t buffer_max_size)
+vi_err_t camera_get_frame(uint8_t *buffer, uint32_t buffer_max_size)
 {
     vi_err_t err = VI_OK;
 
@@ -449,8 +449,8 @@ vi_err_t camera_snap(uint8_t *buffer, uint32_t buffer_max_size)
     static long long int cur_time = 0;
     static long long int last_time = 0;
 
-    while(1)
-    {
+    // while(1)
+    // {
     //出队，处理，写入yuv文件，入队，循环进行
     for(n_buffers = 0; n_buffers < FRAME_NUM; n_buffers++)
     {
@@ -466,8 +466,8 @@ vi_err_t camera_snap(uint8_t *buffer, uint32_t buffer_max_size)
         printf("time_deta:%lld ms\n\n",extra_time / 1000);
         printf("buf_len:%d\n",buffers[n_buffers].length);
 
-        // memcpy(buffer, buffers[n_buffers].start, buffers[n_buffers].length);
-        
+        memcpy(buffer, buffers[n_buffers].start, buffers[n_buffers].length);
+#if 0 
         user_sdl_t *sdl = (user_sdl_t *)&user_sdl;
         SDL_RWops *dst = SDL_RWFromMem(buffers[n_buffers].start, buffers[n_buffers].length);
         if (!dst)
@@ -486,11 +486,11 @@ vi_err_t camera_snap(uint8_t *buffer, uint32_t buffer_max_size)
         SDL_RenderClear(sdl->ren);
         SDL_RenderCopy(sdl->ren, tet, NULL, NULL);
         SDL_RenderPresent(sdl->ren);
-        
+#endif
         //入队循环
         ioctl(fd, VIDIOC_QBUF, &buf);       
     }
-    }
+    // }
 
     return err;
 }
