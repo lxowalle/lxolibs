@@ -82,7 +82,7 @@ static void __attribute__((constructor)) _start_handler(void)
 
 static void __attribute__((constructor)) _show_video(void)
 {
-#if 1
+#if 0
     image_t snap_img;
     snap_img.h = 240;
     snap_img.w = 320;
@@ -174,7 +174,7 @@ void uartp_irq_task(void *param)
 
 void vi_task(void *param)
 {
-#if 0
+#if 1
     image_t snap_img;
     snap_img.h = 240;
     snap_img.w = 320;
@@ -189,14 +189,16 @@ void vi_task(void *param)
     vi_err_t err = VI_OK;
     while(1)
     {
+        portENTER_CRITICAL();
         err = vi.loop();
         if (err != VI_OK)   continue;
+        portEXIT_CRITICAL();
 
         err = vi.snap(NULL, &snap_img);
         if (err == VI_OK)
         {
             LOGI("Snap OK!\n"); 
-
+            
             user_sdl_t *sdl = (user_sdl_t *)get_sdl_handle();
             SDL_RWops *dst = SDL_RWFromMem(snap_img.addr, 154189);
             if (!dst)
@@ -216,7 +218,6 @@ void vi_task(void *param)
             SDL_RenderCopy(sdl->ren, tet, NULL, NULL);
             SDL_RenderPresent(sdl->ren);
         }
-
         vTaskDelay(pdMS_TO_TICKS(10));
     }
 #endif
