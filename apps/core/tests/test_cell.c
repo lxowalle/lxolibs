@@ -6,8 +6,8 @@ void cell_work(struct cell_t *cell, void *param)
     LOGI("In cell!\n");
     for (int i = 0; i < cell->chnl_len; i ++)
     {
-        if (cell->chnl[i])
-            cell_work(cell->chnl[i], param);
+        if (cell->chnl[i] && cell->chnl[i]->work)
+            cell->chnl[i]->work(cell->chnl[i], param);
     }
 }
 
