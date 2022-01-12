@@ -10,6 +10,9 @@ typedef struct cell_t cell_t;
 typedef enum
 {
     CELL_TYPE_NORMAL,
+    CELL_TYPE_PSEUDOUNIPOLAR,           /* 假单极神经元 */
+    CELL_TYPE_BIPOLAR,                  /* 双极神经元 */
+    CELL_TYPE_MULTIPOLAR,               /* 多级神经元 */
     CELL_TYPE_MAX,
 }cell_type_t;
 

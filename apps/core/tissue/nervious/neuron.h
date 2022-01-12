@@ -1,6 +1,7 @@
 #ifndef __NERVE_H
 #define __NERVE_H
 
+#include "cell.h"
 /**
  * 一、按位置和功能分类：
  * 中枢神经

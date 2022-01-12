@@ -13,6 +13,15 @@ static cell_t *_cell_create(cell_type_t type, cell_work_t work)
     case CELL_TYPE_NORMAL:
         channel_num = 2;
         break;
+    case CELL_TYPE_PSEUDOUNIPOLAR:
+        channel_num = 2;
+        break;
+    case CELL_TYPE_BIPOLAR:
+        channel_num = 3;
+        break;
+    case CELL_TYPE_MULTIPOLAR:
+        channel_num = 3;
+        break;
     default:return NULL;
     }
 
