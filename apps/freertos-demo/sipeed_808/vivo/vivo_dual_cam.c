@@ -1,14 +1,14 @@
-#include "vi_dual_cam.h"
+#include "vivo_dual_cam.h"
 
 /**
  * @brief Buffer status
 */
 typedef enum
 {
-    VI_BUFFER_IDLE,
-    VI_BUFFER_BUSY,
-    VI_BUFFER_FULL
-}vi_buffer_status_t;
+    VIVO_BUFFER_IDLE,
+    VIVO_BUFFER_BUSY,
+    VIVO_BUFFER_FULL
+}vivo_buffer_status_t;
 
 /**
  * @brief Private data
@@ -17,11 +17,11 @@ typedef struct
 {
     image_t image_buffer[2];
     uint32_t image_size;
-    vi_buffer_status_t  image_buffer_status[2];
+    vivo_buffer_status_t  image_buffer_status[2];
     int buffer_index_in_use;    // -1,no index in use
-}vi_private_t;
+}vivo_private_t;
 
-static vi_t vi_dual_cam;
+static vivo_t vivo_dual_cam;
 
 /**
  * @brief Init
@@ -31,25 +31,25 @@ static vi_t vi_dual_cam;
  * @param   [in]    h       Camera image height
  * @return
 */
-static vi_err_t _vi_dual_cam_init(vi_format_t format, uint16_t w, uint16_t h)
+static vivo_err_t _vivo_dual_cam_init(vivo_format_t format, uint16_t w, uint16_t h)
 {
-    vi_err_t err = VI_OK;
-    vi_t *vi = (vi_t *)&vi_dual_cam;
+    vivo_err_t err = VIVO_OK;
+    vivo_t *vivo = (vivo_t *)&vivo_dual_cam;
 
-    if (vi->is_init) return VI_ERR_REINIT;
+    if (vivo->is_init) return VIVO_ERR_REINIT;
     /* Init lock */
     // ...
 
     /* Lock */
-    if (vi->lock)
-        vi->lock();
+    if (vivo->lock)
+        vivo->lock();
 
     /* Add private param */
-    static vi_private_t private;
-    vi->private = &private;
+    static vivo_private_t private;
+    vivo->private = &private;
     private.buffer_index_in_use = -1;
 
-    if (format == VI_FORMAT_YUV420)
+    if (format == VIVO_FORMAT_YUV420)
     {
         private.image_size = w * h * 2;
         for (int i = 0; i < 2; i ++)
@@ -59,7 +59,7 @@ static vi_err_t _vi_dual_cam_init(vi_format_t format, uint16_t w, uint16_t h)
             private.image_buffer[i].pixel = 2;
         }
     }
-    else if (format == VI_FORMAT_JPEG)
+    else if (format == VIVO_FORMAT_JPEG)
     {
         private.image_size = w * h * 3;
         for (int i = 0; i < 2; i ++)            // There has some error setting, just for test
@@ -71,7 +71,7 @@ static vi_err_t _vi_dual_cam_init(vi_format_t format, uint16_t w, uint16_t h)
     }
     else
     {
-        err = VI_ERR_PARAM;
+        err = VIVO_ERR_PARAM;
         goto _exit;
     }
     
@@ -79,14 +79,14 @@ static vi_err_t _vi_dual_cam_init(vi_format_t format, uint16_t w, uint16_t h)
     private.image_buffer[0].addr = (uint8_t *)malloc(private.image_size);   
     if (!private.image_buffer[0].addr)  
     {
-        err = VI_ERR_MEM;
+        err = VIVO_ERR_MEM;
         goto _exit;
     }
 
     private.image_buffer[1].addr = (uint8_t *)malloc(private.image_size);
     if (!private.image_buffer[1].addr)  
     {
-        err = VI_ERR_MEM;
+        err = VIVO_ERR_MEM;
         free(private.image_buffer[0].addr);
         private.image_buffer[0].addr = NULL;
         goto _exit;
@@ -94,17 +94,17 @@ static vi_err_t _vi_dual_cam_init(vi_format_t format, uint16_t w, uint16_t h)
 
     /* Camera device init */
     err = camera_init(w, h);
-    if (err != VI_OK)   goto _exit;
+    if (err != VIVO_OK)   goto _exit;
 
-    /* Reset vi param */
+    /* Reset vivo param */
 
     /* Init over */ 
-    vi->is_init = 1;
+    vivo->is_init = 1;
 
 _exit:
     /* Unlock */
-    if (vi->unlock)
-        vi->unlock();
+    if (vivo->unlock)
+        vivo->unlock();
 
     return err;
 }
@@ -113,16 +113,16 @@ _exit:
  * @brief Deinit
  * @return
 */
-static vi_err_t _vi_dual_cam_deinit(void)
+static vivo_err_t _vivo_dual_cam_deinit(void)
 {
-    vi_err_t err = VI_OK;
-    vi_t *vi = (vi_t *)&vi_dual_cam;
-    vi_private_t *private = (vi_private_t *)vi->private;
-    if (!vi->is_init) return VI_ERR_UNINIT;
+    vivo_err_t err = VIVO_OK;
+    vivo_t *vivo = (vivo_t *)&vivo_dual_cam;
+    vivo_private_t *private = (vivo_private_t *)vivo->private;
+    if (!vivo->is_init) return VIVO_ERR_UNINIT;
 
     /* Lock */
-    if (vi->lock)
-        vi->lock();
+    if (vivo->lock)
+        vivo->lock();
 
     /* Deinit */
     if (private->image_buffer[0].addr)
@@ -138,15 +138,15 @@ static vi_err_t _vi_dual_cam_deinit(void)
     }
 
     err = camera_deinit();
-    if (err != VI_OK)   goto _exit;
+    if (err != VIVO_OK)   goto _exit;
 
     /* Deinit over */ 
-    vi->is_init = 0;
+    vivo->is_init = 0;
 
 _exit:
     /* Unlock */
-    if (vi->unlock)
-        vi->unlock();
+    if (vivo->unlock)
+        vivo->unlock();
 
     /* Deinit lock */
     // ...
@@ -158,10 +158,10 @@ _exit:
  * @brief Lock
  * @return
 */
-static vi_err_t _vi_dual_cam_lock(void)
+static vivo_err_t _vivo_dual_cam_lock(void)
 {
     // Lock
-    vi_err_t err = VI_OK;
+    vivo_err_t err = VIVO_OK;
 
     return err;
 }
@@ -170,10 +170,10 @@ static vi_err_t _vi_dual_cam_lock(void)
  * @brief Unlock
  * @return
 */
-static vi_err_t _vi_dual_cam_unlock(void)
+static vivo_err_t _vivo_dual_cam_unlock(void)
 {
     // Unlock
-    vi_err_t err = VI_OK;
+    vivo_err_t err = VIVO_OK;
 
     return err;
 }
@@ -182,16 +182,16 @@ static vi_err_t _vi_dual_cam_unlock(void)
  * @brief Loop
  * @return
 */
-static vi_err_t _vi_dual_cam_loop(void)
+static vivo_err_t _vivo_dual_cam_loop(void)
 {
-    vi_err_t err = VI_OK;
-    vi_t *vi = (vi_t *)&vi_dual_cam;
-    vi_private_t *private = (vi_private_t *)vi->private;
-    if (!vi->is_init) return VI_ERR_UNINIT;
+    vivo_err_t err = VIVO_OK;
+    vivo_t *vivo = (vivo_t *)&vivo_dual_cam;
+    vivo_private_t *private = (vivo_private_t *)vivo->private;
+    if (!vivo->is_init) return VIVO_ERR_UNINIT;
 
     /* Lock */
-    if (vi->lock)
-        vi->lock();
+    if (vivo->lock)
+        vivo->lock();
 
     /**
      *  Snap camera data andler
@@ -216,8 +216,8 @@ static vi_err_t _vi_dual_cam_loop(void)
     */
     // Choose buffer index
     int snap_idx = -1;
-    if (private->image_buffer_status[0] != VI_BUFFER_BUSY
-        && private->image_buffer_status[1] != VI_BUFFER_IDLE)
+    if (private->image_buffer_status[0] != VIVO_BUFFER_BUSY
+        && private->image_buffer_status[1] != VIVO_BUFFER_IDLE)
     {
         snap_idx = 0;
     }
@@ -226,20 +226,20 @@ static vi_err_t _vi_dual_cam_loop(void)
         snap_idx = 1;
     }
 
-    if (private->image_buffer_status[0] ==  VI_BUFFER_BUSY 
-        && private->image_buffer_status[1] == VI_BUFFER_BUSY)
+    if (private->image_buffer_status[0] ==  VIVO_BUFFER_BUSY 
+        && private->image_buffer_status[1] == VIVO_BUFFER_BUSY)
     {
-        err = VI_ERR_UNKNOWN;
+        err = VIVO_ERR_UNKNOWN;
         goto _exit;
     }
 
     // Snap
-    vi_buffer_status_t curr_sta = private->image_buffer_status[snap_idx];
-    private->image_buffer_status[snap_idx] = VI_BUFFER_BUSY;
+    vivo_buffer_status_t curr_sta = private->image_buffer_status[snap_idx];
+    private->image_buffer_status[snap_idx] = VIVO_BUFFER_BUSY;
     err = camera_get_frame(private->image_buffer[snap_idx].addr, private->image_size);
-    if (err == VI_OK)
+    if (err == VIVO_OK)
     {
-        private->image_buffer_status[snap_idx] = VI_BUFFER_FULL;
+        private->image_buffer_status[snap_idx] = VIVO_BUFFER_FULL;
     }
     else
     {
@@ -248,8 +248,8 @@ static vi_err_t _vi_dual_cam_loop(void)
     
 _exit:
     /* Unlock */
-    if (vi->unlock)
-        vi->unlock();
+    if (vivo->unlock)
+        vivo->unlock();
 
     return err;
 }
@@ -260,15 +260,15 @@ _exit:
  * @param [in]  argN
  * @return
 */
-static vi_err_t _vi_dual_cam_control(int cmd, ...)
+static vivo_err_t _vivo_dual_cam_control(int cmd, ...)
 {
-    vi_err_t err = VI_OK;
-    vi_t *vi = (vi_t *)&vi_dual_cam;
-    if (!vi->is_init) return VI_ERR_UNINIT;
+    vivo_err_t err = VIVO_OK;
+    vivo_t *vivo = (vivo_t *)&vivo_dual_cam;
+    if (!vivo->is_init) return VIVO_ERR_UNINIT;
 
     /* Lock */
-    if (vi->lock)
-        vi->lock();
+    if (vivo->lock)
+        vivo->lock();
 
     /* Control */
     va_list ap;
@@ -281,8 +281,8 @@ static vi_err_t _vi_dual_cam_control(int cmd, ...)
     va_end(ap);
 
     /* Unlock */
-    if (vi->unlock)
-        vi->unlock();
+    if (vivo->unlock)
+        vivo->unlock();
 
     return err;
 }
@@ -292,102 +292,102 @@ static vi_err_t _vi_dual_cam_control(int cmd, ...)
  * @param [in]  type
  * @return
 */
-static vi_err_t _vi_dual_cam_snap(int type, image_t *image)
+static vivo_err_t _vivo_dual_cam_snap(int type, image_t *image)
 {
-    vi_err_t err = VI_OK;
-    vi_t *vi = (vi_t *)&vi_dual_cam;
-    vi_private_t *private = (vi_private_t *)vi->private;
-    if (!vi->is_init) return VI_ERR_UNINIT;
+    vivo_err_t err = VIVO_OK;
+    vivo_t *vivo = (vivo_t *)&vivo_dual_cam;
+    vivo_private_t *private = (vivo_private_t *)vivo->private;
+    if (!vivo->is_init) return VIVO_ERR_UNINIT;
 
     /* Lock */
-    if (vi->lock)
-        vi->lock();
+    if (vivo->lock)
+        vivo->lock();
 
     /* Snap */
     int buffer_idx = -1;
-    if (private->image_buffer_status[0] == VI_BUFFER_FULL)
+    if (private->image_buffer_status[0] == VIVO_BUFFER_FULL)
     {
         buffer_idx = 0;
     }
-    else if (private->image_buffer_status[1] == VI_BUFFER_FULL)
+    else if (private->image_buffer_status[1] == VIVO_BUFFER_FULL)
     {
         buffer_idx = 1;
     }
     else
     {
         private->buffer_index_in_use = -1;
-        err = VI_ERR_TODO;
+        err = VIVO_ERR_TODO;
         goto _exit;
     }
 
     if (image == NULL || image->addr == NULL)
     {
-        err = VI_ERR_PARAM;
+        err = VIVO_ERR_PARAM;
         goto _exit;
     }
 
     if (private->image_buffer[buffer_idx].h * private->image_buffer[buffer_idx].w * private->image_buffer[buffer_idx].pixel
         < image->h * image->w * image->pixel)
     {
-        err = VI_ERR_PARAM;
+        err = VIVO_ERR_PARAM;
         goto _exit;
     }
-    private->image_buffer_status[buffer_idx] = VI_BUFFER_BUSY;
+    private->image_buffer_status[buffer_idx] = VIVO_BUFFER_BUSY;
     private->buffer_index_in_use = buffer_idx;
     memcpy(image->addr, private->image_buffer[buffer_idx].addr, image->h * image->w * image->pixel);
-    private->image_buffer_status[buffer_idx] = VI_BUFFER_IDLE;
+    private->image_buffer_status[buffer_idx] = VIVO_BUFFER_IDLE;
     
 _exit:
     /* Unlock */
-    if (vi->unlock)
-        vi->unlock();
+    if (vivo->unlock)
+        vivo->unlock();
 
     return err;
 }
 
-static vi_t vi_dual_cam = 
+static vivo_t vivo_dual_cam = 
 {
     .is_init = 0,
     .private = NULL,
-    .init = _vi_dual_cam_init,
-    .deinit = _vi_dual_cam_deinit,
-    .lock = _vi_dual_cam_lock,
-    .unlock = _vi_dual_cam_unlock,
-    .loop = _vi_dual_cam_loop,
-    .control = _vi_dual_cam_control,
-    .snap = _vi_dual_cam_snap
+    .init = _vivo_dual_cam_init,
+    .deinit = _vivo_dual_cam_deinit,
+    .lock = _vivo_dual_cam_lock,
+    .unlock = _vivo_dual_cam_unlock,
+    .loop = _vivo_dual_cam_loop,
+    .control = _vivo_dual_cam_control,
+    .snap = _vivo_dual_cam_snap
 };
 
 /**
- * @brief Get vi handle
- * @return Return a point of vi handle
+ * @brief Get vivo handle
+ * @return Return a point of vivo handle
 */
-vi_t *get_vi_dual_cam_handle(void)
+vivo_t *get_vivo_dual_cam_handle(void)
 {
-    return &vi_dual_cam;
+    return &vivo_dual_cam;
 }
 
-vi_err_t __attribute__((weak)) camera_init(uint16_t w, uint16_t h)
+vivo_err_t __attribute__((weak)) camera_init(uint16_t w, uint16_t h)
 {
-    vi_err_t err = VI_OK;
+    vivo_err_t err = VIVO_OK;
 
     LOGW("Camera init is not define!\n");
 
     return err;
 }
 
-vi_err_t __attribute__((weak)) camera_deinit(void)
+vivo_err_t __attribute__((weak)) camera_deinit(void)
 {
-    vi_err_t err = VI_OK;
+    vivo_err_t err = VIVO_OK;
 
     LOGW("Camera deinit is not define!\n");
 
     return err;
 }
 
-vi_err_t __attribute__((weak)) camera_get_frame(uint8_t *buffer, uint32_t buffer_max_size)
+vivo_err_t __attribute__((weak)) camera_get_frame(uint8_t *buffer, uint32_t buffer_max_size)
 {
-    vi_err_t err = VI_OK;
+    vivo_err_t err = VIVO_OK;
 
     LOGW("Camera snap is not define!\n");
 

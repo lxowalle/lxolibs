@@ -3,7 +3,7 @@
 #include "task.h"
 #include "mf_uartp.h"
 #include "use_sdl2_show_v4l2.h"
-#include "vi.h"
+#include "vivo.h"
 #include "flow.h"
 
 typedef struct
@@ -45,7 +45,7 @@ static TaskHandle_t video_handle = NULL;
 
 void user_task0(void *param);
 void uartp_irq_task(void *param);
-void vi_task(void *param);
+void vivo_task(void *param);
 
 void handle_sigint( int signal )
 {
@@ -70,13 +70,13 @@ static void __attribute__((constructor)) _start_handler(void)
     res = xTaskCreate(user_task0, "user task0", configMINIMAL_STACK_SIZE, (void *)1, 3, &user_handle0);
     if (pdPASS != res)  {LOGE("Create user task0 failed! res: %ld\n", res); exit(1);}
 #if 1
-    err = vi_choose(VI_TYPE_USB_CAM);
-    if (MF_OK != err)   {LOGE("vi choose failed!\n"); exit(1);}
-    err = vi.init(VI_FORMAT_JPEG, 320, 240);
-    if (MF_OK != err)   {LOGE("vi init failed!\n"); exit(1);}
+    err = vivo_choose(VIVO_TYPE_USB_CAM);
+    if (MF_OK != err)   {LOGE("vivo choose failed!\n"); exit(1);}
+    err = vivo.init(VIVO_FORMAT_JPEG, 320, 240);
+    if (MF_OK != err)   {LOGE("vivo init failed!\n"); exit(1);}
 
-    res = xTaskCreate(vi_task, "vi task", configMINIMAL_STACK_SIZE, NULL, 5, &video_handle);
-    if (pdPASS != res)  {LOGE("Create vi task failed! res: %ld\n", res); exit(1);}
+    res = xTaskCreate(vivo_task, "vivo task", configMINIMAL_STACK_SIZE, NULL, 5, &video_handle);
+    if (pdPASS != res)  {LOGE("Create vivo task failed! res: %ld\n", res); exit(1);}
 #endif
 }
 
@@ -94,14 +94,14 @@ static void __attribute__((constructor)) _show_video(void)
         exit(-1);
     }
 
-    vi_err_t err = VI_OK;
+    vivo_err_t err = VIVO_OK;
     while(1)
     {
-        err = vi.loop();
-        if (err != VI_OK)   continue;
+        err = vivo.loop();
+        if (err != VIVO_OK)   continue;
 
-        err = vi.snap(0, &snap_img);
-        if (err == VI_OK)
+        err = vivo.snap(0, &snap_img);
+        if (err == VIVO_OK)
         {
             LOGI("Snap OK!\n"); 
 
@@ -133,8 +133,8 @@ static void __attribute__((destructor)) _exit_handler(void)
     LOGI("exit handler!\n");
     if (mf_uartp.deinit)
         mf_uartp.deinit();
-    if (vi.deinit)
-        vi.deinit();
+    if (vivo.deinit)
+        vivo.deinit();
 }
 
 int main(int argc, char const *argv[])
@@ -172,7 +172,7 @@ void uartp_irq_task(void *param)
 }
 
 
-void vi_task(void *param)
+void vivo_task(void *param)
 {
 #if 1
     image_t snap_img;
@@ -186,16 +186,16 @@ void vi_task(void *param)
         exit(-1);
     }
 
-    vi_err_t err = VI_OK;
+    vivo_err_t err = VIVO_OK;
     while(1)
     {
         portENTER_CRITICAL();
-        err = vi.loop();
-        if (err != VI_OK)   continue;
+        err = vivo.loop();
+        if (err != VIVO_OK)   continue;
         portEXIT_CRITICAL();
 
-        err = vi.snap(0, &snap_img);
-        if (err == VI_OK)
+        err = vivo.snap(0, &snap_img);
+        if (err == VIVO_OK)
         {
             LOGI("Snap OK!\n"); 
             
