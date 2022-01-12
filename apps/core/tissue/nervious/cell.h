@@ -13,18 +13,18 @@ typedef enum
     CELL_TYPE_MAX,
 }cell_type_t;
 
-typedef err_t (*cell_work_t)(void *param);
+typedef void (*cell_work_t)(cell_t *cell, void *param);
 
 /**
  * @brief 细胞基本结构
 */
 struct cell_t
 {
-    cell_type_t type;
     void *private;
     cell_work_t work;
-    cell_t *chnl[CELL_CHANNEL_MAX];
+    cell_t **chnl;
     int chnl_len;
+    cell_type_t type;
 };
 
 /**
@@ -65,11 +65,18 @@ typedef struct
      * @return
     */
     err_t (*disconnect)(cell_t *dst, cell_t *src, int bilateral);
+
+    /**
+     * @brief 打印细胞通道
+     * @param [in]  cell 目标细胞
+     * @return
+    */
+    void (*list_channel)(const cell_t *cell);
 }cell_factory_t;
 
 /**
  * @brief 细胞工厂
 */
-extern cell_factory_t cell_facetory;
+extern cell_factory_t cell_tools;
 
 #endif /* __CELL_H */

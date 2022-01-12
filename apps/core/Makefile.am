@@ -14,3 +14,6 @@ core_CPPFLAGS           += -Itissue/nervious
 # Link libs
 core_CPPFLAGS           += -I$(top_srcdir)/common
 core_LDADD              = $(top_srcdir)/common/libcommon.a
+
+# subdir
+SUBDIRS                 = tests

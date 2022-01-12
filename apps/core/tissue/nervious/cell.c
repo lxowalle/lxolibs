@@ -4,8 +4,21 @@
  * @brief 创造一个细胞
  * @return
 */
-static cell_t *_cell_create(cell_type_t type, cell_work_t doing)
+static cell_t *_cell_create(cell_type_t type, cell_work_t work)
 {
+    int channel_num = 0;
+
+    switch (type)
+    {
+    case CELL_TYPE_NORMAL:
+        channel_num = 2;
+        break;
+    default:return NULL;
+    }
+
+    if (channel_num > CELL_CHANNEL_MAX)
+        return NULL;
+
     cell_t *new_cell = (cell_t *)calloc(sizeof(cell_t), 1);
     if (!new_cell)
     {
@@ -13,16 +26,18 @@ static cell_t *_cell_create(cell_type_t type, cell_work_t doing)
         return NULL;
     }
 
-    switch (type)
+    new_cell->chnl_len = channel_num;
+    new_cell->chnl = (cell_t **)calloc(sizeof(cell_t *), new_cell->chnl_len);
+    if (!new_cell->chnl)
     {
-    case CELL_TYPE_NORMAL:
-        break;
-    default:return NULL;
+        free(new_cell);
+        LOGE("Memory overflow!\n");
+        return NULL;
     }
 
     new_cell->type = type;
     new_cell->private = NULL;
-    new_cell->work = doing;
+    new_cell->work = work;
 
     return new_cell;
 }
@@ -35,9 +50,12 @@ static void _cell_destory(cell_t **cell)
 {
     if (*cell)
     {
+        if ((*cell)->chnl)
+            free((*cell)->chnl);
+            
         free(*cell);
         *cell = NULL;
-    }    
+    }
 }
 
 /**
@@ -51,21 +69,34 @@ static err_t _cell_connect(cell_t *dst, cell_t *src, int bilateral)
     if (dst == NULL || src == NULL)
         return ERR_PARAM;
 
-    if (src->chnl_len >= CELL_CHANNEL_MAX)
+    if (src->chnl_len > CELL_CHANNEL_MAX)
         return ERR_TODO;
 
-    /* dir=0,单向连通;dir=1,双向连通 */
+    /* bilateral=1,双向连通;bilateral=0,单向连通; */
+    int index = 0;
     if (bilateral) {
-        if (dst->chnl_len >= CELL_CHANNEL_MAX)
-            return ERR_TODO;
+        do
+        {
+            if (dst->chnl[index] == NULL)
+            {
+                dst->chnl[index] = src;
+                break;
+            }
+            ++ index;
+        }while(index < dst->chnl_len);
+    }
+ 
+    index = 0;
+    do
+    {
+        if (src->chnl[index] == NULL)
+        {
+            src->chnl[index] = dst;
+            break;
+        }
+        ++ index;
+    }while(index < src->chnl_len);
 
-        dst->chnl[dst->chnl_len ++] = src;
-        src->chnl[src->chnl_len ++] = dst;
-    }
-    else {
-        src->chnl[src->chnl_len ++] = dst;
-    }
-    
     return err;
 }
 
@@ -78,31 +109,58 @@ static err_t _cell_disconnect(cell_t *dst, cell_t *src, int bilateral)
     if (dst == NULL || src == NULL)
         return ERR_PARAM;
 
-    if (bilateral)
-    {
-        for (int i = 0; i < dst->chnl_len; i ++)
+    /* bilateral=1,双向断开;bilateral=0,单向断开; */
+    int index = 0;
+    if (bilateral) {
+        do
         {
-            if (dst->chnl[i] == src)
-                dst->chnl[i] = NULL;
-        }
+            if (dst->chnl[index] == src)
+            {
+                dst->chnl[index] = NULL;
+                break;
+            }
+            ++ index;
+        }while(index < dst->chnl_len);
     }
 
-    for (int i = 0; i < src->chnl_len; i ++)
+    do
     {
-        if (src->chnl[i] == dst)
-            src->chnl[i] = NULL;
-    }
+        if (src->chnl[index] == dst)
+        {
+            src->chnl[index] = NULL;
+            break;
+        }
+        ++ index;
+    }while(index < src->chnl_len);
 
     return OK;
 }
 
 /**
+ * @brief 打印细胞通道
+ * @return
+*/
+static void _cell_list_channel(const cell_t *cell)
+{
+    int i = 0;
+    printf("cell channel:\t");
+    for (int i = 0; i < cell->chnl_len; i ++)
+    {
+        if (i % 3 == 0)
+            printf("\n");
+        printf("%p\t", cell->chnl[i]);
+    }
+    printf("\n");
+}
+
+/**
  * @brief 细胞工厂
 */
-cell_factory_t cell_facetory = 
+cell_factory_t cell_tools = 
 {
     .create = _cell_create,
     .destory = _cell_destory,
     .connect = _cell_connect,
-    .disconnect = _cell_disconnect
+    .disconnect = _cell_disconnect,
+    .list_channel = _cell_list_channel
 };
