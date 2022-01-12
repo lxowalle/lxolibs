@@ -83,7 +83,7 @@ static void __attribute__((constructor)) _start_handler(void)
     err = aiao_choose(AIAO_TYPE_NORMAL);
     if (MF_OK != err)   {LOGE("aiao choose failed!\n"); exit(1);}
     err = aiao.init();
-    if (MF_OK != err)   {LOGE("aiao init failed!\n"); exit(1);}
+    if (MF_OK != err)   {LOGE("vivo init failed!\n"); exit(1);}
 }
 
 static void __attribute__((constructor)) _show_video(void)
