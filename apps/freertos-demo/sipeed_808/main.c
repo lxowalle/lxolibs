@@ -6,132 +6,42 @@
 #include "vivo.h"
 #include "flow.h"
 #include "aiao.h"
+#include "db.h"
 
-typedef struct
-{
-    mf_err_t type;
-    char str[30];
-}mf_err_str_t;
-
-const mf_err_str_t mf_err_str_arr[] = 
-{
-    {MF_OK, "OK"},
-    {MF_ERR_PARAM, "Param is invalid"},
-    {MF_ERR_MEM, "Memory is overflow"},
-    {MF_ERR_NORMAL, "Normal error"},
-    {MF_ERR_REINIT, "Something had redefine"},
-    {MF_ERR_UNINIT, "Somthing have not define"},
-    {MF_ERR_UNKNOWN, "Unknown cause of error"},
-    {MF_ERR_TODO, "TODO error"},
-    {MF_ERR_INIT, "Init error"},
-    {MF_ERR_MAX, "Can't find error string"},
-};
-
-const char *mf_err_str(mf_err_t type)
-{
-    int max_size = sizeof(mf_err_str_arr) / sizeof(mf_err_str_arr[0]);
-    for (int i = 0; i < max_size - 1; i ++)
-    {
-        if (type == mf_err_str_arr[i].type)
-        {
-            return mf_err_str_arr[i].str;
-        }
-    }
-    return mf_err_str_arr[max_size - 1].str;
-}
-
-static TaskHandle_t uartp_irq_handle = NULL;
-static TaskHandle_t video_handle = NULL;
-
-void uartp_irq_task(void *param);
-void vivo_task(void *param);
-
-void handle_sigint( int signal )
-{
-    LOGI("Get exit signal!\n");
-    exit(0);
-}
+static TaskHandle_t uartp_process_handle = NULL;
+static TaskHandle_t camera_process_handle = NULL;
+void camera_process(void *param);
+void uartp_process(void *param);
+void handle_sigint(int signal);
 
 static void __attribute__((constructor)) _start_handler(void)
 {
     LOGI("start handler!\n");
-
     signal( SIGINT, handle_sigint );
 
     BaseType_t res;
     mf_err_t err = MF_OK;
-
     /* uartp init */
     err = mf_uartp_choose(UARTP_TYPE_BIN);
-    if (MF_OK != err)   {LOGE("uartp choose failed! reason: %s\n", mf_err_str(err)); exit(1);}
+    if (MF_OK != err)   {LOGE("uartp choose failed! reason: %d\n", err); exit(1);}
     err = mf_uartp.init();
-    if (MF_OK != err)   {LOGE("uartp init failed! reason: %s\n", mf_err_str(err)); exit(1);}
-    res = xTaskCreate(uartp_irq_task, "uartp irq task", configMINIMAL_STACK_SIZE, NULL, 4, &uartp_irq_handle);
+    if (MF_OK != err)   {LOGE("uartp init failed! reason: %d\n", err); exit(1);}
+    res = xTaskCreate(uartp_process, "uartp irq task", configMINIMAL_STACK_SIZE, NULL, 4, &uartp_process_handle);
     if (pdPASS != res)  {LOGE("Create uartp irq task failed! res: %ld\n", res); exit(1);}
-
 #if 1
     /* vivo init */
     err = vivo_choose(VIVO_TYPE_USB_CAM);
     if (MF_OK != err)   {LOGE("vivo choose failed!\n"); exit(1);}
     err = vivo.init(VIVO_FORMAT_JPEG, 320, 240);
     if (MF_OK != err)   {LOGE("vivo init failed!\n"); exit(1);}
-    res = xTaskCreate(vivo_task, "vivo task", configMINIMAL_STACK_SIZE, NULL, 5, &video_handle);
-    if (pdPASS != res)  {LOGE("Create vivo task failed! res: %ld\n", res); exit(1);}
+    res = xTaskCreate(camera_process, "camera snap task", configMINIMAL_STACK_SIZE, NULL, 5, &camera_process_handle);
+    if (pdPASS != res)  {LOGE("Create camera snap task failed! res: %ld\n", res); exit(1);}
 #endif
-
     /* aiao init */
     err = aiao_choose(AIAO_TYPE_NORMAL);
     if (MF_OK != err)   {LOGE("aiao choose failed!\n"); exit(1);}
     err = aiao.init();
     if (MF_OK != err)   {LOGE("vivo init failed!\n"); exit(1);}
-}
-
-static void __attribute__((constructor)) _show_video(void)
-{
-#if 0
-    image_t snap_img;
-    snap_img.h = 240;
-    snap_img.w = 320;
-    snap_img.pixel = 3;
-    snap_img.addr = (uint8_t *)malloc(snap_img.w * snap_img.h * snap_img.pixel);
-    if (!snap_img.addr)
-    {
-        LOGE("MEMORY OVERFLOW!\n");
-        exit(-1);
-    }
-
-    vivo_err_t err = VIVO_OK;
-    while(1)
-    {
-        err = vivo.loop();
-        if (err != VIVO_OK)   continue;
-
-        err = vivo.snap(0, &snap_img);
-        if (err == VIVO_OK)
-        {
-            LOGI("Snap OK!\n"); 
-
-            user_sdl_t *sdl = (user_sdl_t *)get_sdl_handle();
-            SDL_RWops *dst = SDL_RWFromMem(snap_img.addr, 154189);
-            if (!dst)
-            {
-                LOGE("SDL_RWFromFile failed\n");
-            }
-            SDL_Surface *sur = IMG_LoadJPG_RW(dst);
-            if (!sur)
-            {
-                LOGE("IMG_LoadJPG_RW failed\n");
-            }
-            SDL_Texture *tet = SDL_CreateTextureFromSurface(sdl->ren, sur);
-            SDL_FreeRW(dst);
-            SDL_FreeSurface(sur);
-
-            SDL_RenderClear(sdl->ren);
-            SDL_RenderCopy(sdl->ren, tet, NULL, NULL);
-            SDL_RenderPresent(sdl->ren);
-        }
-    }
-#endif
 }
 
 static void __attribute__((destructor)) _exit_handler(void)
@@ -147,18 +57,12 @@ static void __attribute__((destructor)) _exit_handler(void)
 
 int main(int argc, char const *argv[])
 {
-    LOGI("FreeRTOS start scheduler\n");
-
 	vTaskStartScheduler();
-
     return 0;
 }
 
-void uartp_irq_task(void *param)
+void uartp_process(void *param)
 {
-    uint8_t buff[128];
-    int cnt = 0;
-    int real_cnt = 0;
     while (1)
     {
         mf_uartp.loop();
@@ -166,9 +70,8 @@ void uartp_irq_task(void *param)
     }
 }
 
-void vivo_task(void *param)
+void camera_process(void *param)
 {
-#if 1
     image_t snap_img;
     snap_img.h = 240;
     snap_img.w = 320;
@@ -181,7 +84,7 @@ void vivo_task(void *param)
     }
 
     vivo_err_t err = VIVO_OK;
-    while(1)
+    while (1)
     {
         portENTER_CRITICAL();
         err = vivo.loop();
@@ -214,8 +117,13 @@ void vivo_task(void *param)
         }
         vTaskDelay(pdMS_TO_TICKS(10));
     }
-#endif
     vTaskDelete(NULL);
+}
+
+void handle_sigint(int signal)
+{
+    LOGI("Get exit signal!\n");
+    exit(0);
 }
 
 void __attribute__((weak)) vAssertCalled( const char * const pcFileName,

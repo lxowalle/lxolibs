@@ -24,6 +24,11 @@ sipeed_808_SOURCES          += flow/flow.c
 sipeed_808_SOURCES          += flow/flow_normal.c
 sipeed_808_CPPFLAGS         += -Iflow
 
+# Object db
+sipeed_808_SOURCES          += db/db.c
+sipeed_808_SOURCES          += db/facedb.c
+sipeed_808_CPPFLAGS         += -Idb
+
 # Object pjsip
 pjsip_srcdir                = $(top_srcdir)/third_party/pjproject
 
