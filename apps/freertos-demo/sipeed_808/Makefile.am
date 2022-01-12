@@ -24,6 +24,9 @@ sipeed_808_SOURCES          += flow/flow.c
 sipeed_808_SOURCES          += flow/flow_normal.c
 sipeed_808_CPPFLAGS         += -Iflow
 
+# Object pjsip
+pjsip_srcdir                = $(top_srcdir)/third_party/pjproject
+
 # Link freertos
 SUBDIRS                     = ../../../third_party/FreeRTOS-Kernel
 sipeed_808_LDADD            = ../../../third_party/FreeRTOS-Kernel/libfreertos.a

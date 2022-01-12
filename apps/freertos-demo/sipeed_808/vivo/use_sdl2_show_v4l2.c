@@ -1,5 +1,5 @@
 #include "use_sdl2_show_v4l2.h"
-#include "vi.h"
+#include "vivo.h"
 #include "common.h"
 
 user_sdl_t user_sdl;
@@ -417,29 +417,29 @@ int use_sdl2_show_v4l2_loop_test(void)
 #endif
 }
 
-vi_err_t camera_init(uint16_t w, uint16_t h)
+vivo_err_t camera_init(uint16_t w, uint16_t h)
 {
-    vi_err_t err = VI_OK;
+    vivo_err_t err = VIVO_OK;
 
     if (use_sdl2_show_v4l2_init() < 0)
-        err = VI_ERR_UNKNOWN;
+        err = VIVO_ERR_UNKNOWN;
     
     return err;
 }
 
-vi_err_t camera_deinit(void)
+vivo_err_t camera_deinit(void)
 {
-    vi_err_t err = VI_OK;
+    vivo_err_t err = VIVO_OK;
 
     if (use_sdl2_show_v4l2_deinit() < 0)
-        err = VI_ERR_UNKNOWN;
+        err = VIVO_ERR_UNKNOWN;
     
     return err;
 }
 
-vi_err_t camera_get_frame(uint8_t *buffer, uint32_t buffer_max_size)
+vivo_err_t camera_get_frame(uint8_t *buffer, uint32_t buffer_max_size)
 {
-    vi_err_t err = VI_OK;
+    vivo_err_t err = VIVO_OK;
 
     unsigned int n_buffers;
     enum v4l2_buf_type type;
