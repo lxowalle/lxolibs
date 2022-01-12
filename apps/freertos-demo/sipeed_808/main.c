@@ -5,6 +5,7 @@
 #include "use_sdl2_show_v4l2.h"
 #include "vivo.h"
 #include "flow.h"
+#include "aiao.h"
 
 typedef struct
 {
@@ -39,11 +40,9 @@ const char *mf_err_str(mf_err_t type)
     return mf_err_str_arr[max_size - 1].str;
 }
 
-static TaskHandle_t user_handle0 = NULL;
 static TaskHandle_t uartp_irq_handle = NULL;
 static TaskHandle_t video_handle = NULL;
 
-void user_task0(void *param);
 void uartp_irq_task(void *param);
 void vivo_task(void *param);
 
@@ -52,6 +51,7 @@ void handle_sigint( int signal )
     LOGI("Get exit signal!\n");
     exit(0);
 }
+
 static void __attribute__((constructor)) _start_handler(void)
 {
     LOGI("start handler!\n");
@@ -60,6 +60,8 @@ static void __attribute__((constructor)) _start_handler(void)
 
     BaseType_t res;
     mf_err_t err = MF_OK;
+
+    /* uartp init */
     err = mf_uartp_choose(UARTP_TYPE_BIN);
     if (MF_OK != err)   {LOGE("uartp choose failed! reason: %s\n", mf_err_str(err)); exit(1);}
     err = mf_uartp.init();
@@ -67,17 +69,21 @@ static void __attribute__((constructor)) _start_handler(void)
     res = xTaskCreate(uartp_irq_task, "uartp irq task", configMINIMAL_STACK_SIZE, NULL, 4, &uartp_irq_handle);
     if (pdPASS != res)  {LOGE("Create uartp irq task failed! res: %ld\n", res); exit(1);}
 
-    res = xTaskCreate(user_task0, "user task0", configMINIMAL_STACK_SIZE, (void *)1, 3, &user_handle0);
-    if (pdPASS != res)  {LOGE("Create user task0 failed! res: %ld\n", res); exit(1);}
 #if 1
+    /* vivo init */
     err = vivo_choose(VIVO_TYPE_USB_CAM);
     if (MF_OK != err)   {LOGE("vivo choose failed!\n"); exit(1);}
     err = vivo.init(VIVO_FORMAT_JPEG, 320, 240);
     if (MF_OK != err)   {LOGE("vivo init failed!\n"); exit(1);}
-
     res = xTaskCreate(vivo_task, "vivo task", configMINIMAL_STACK_SIZE, NULL, 5, &video_handle);
     if (pdPASS != res)  {LOGE("Create vivo task failed! res: %ld\n", res); exit(1);}
 #endif
+
+    /* aiao init */
+    err = aiao_choose(AIAO_TYPE_NORMAL);
+    if (MF_OK != err)   {LOGE("aiao choose failed!\n"); exit(1);}
+    err = aiao.init();
+    if (MF_OK != err)   {LOGE("aiao init failed!\n"); exit(1);}
 }
 
 static void __attribute__((constructor)) _show_video(void)
@@ -135,6 +141,8 @@ static void __attribute__((destructor)) _exit_handler(void)
         mf_uartp.deinit();
     if (vivo.deinit)
         vivo.deinit();
+    if (aiao.deinit)
+        aiao.deinit();
 }
 
 int main(int argc, char const *argv[])
@@ -146,18 +154,6 @@ int main(int argc, char const *argv[])
     return 0;
 }
 
-void user_task0(void *param)
-{
-    static int cnt = 0;
-    BaseType_t res;
-    while (1)
-    {
-        LOGI("cnt:%d\n", cnt ++);
-
-        vTaskDelay(pdMS_TO_TICKS(1000));
-    }
-}
-
 void uartp_irq_task(void *param)
 {
     uint8_t buff[128];
@@ -166,11 +162,9 @@ void uartp_irq_task(void *param)
     while (1)
     {
         mf_uartp.loop();
-
         vTaskDelay(pdMS_TO_TICKS(50));
     }
 }
-
 
 void vivo_task(void *param)
 {

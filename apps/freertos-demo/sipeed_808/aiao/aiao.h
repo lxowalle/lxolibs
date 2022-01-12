@@ -54,6 +54,7 @@ typedef struct
 extern aiao_err_t audio_init(void);
 extern aiao_err_t audio_deinit(void);
 extern aiao_err_t audio_playback(void);
-extern aiao_t ao;
+extern aiao_t aiao;
+aiao_err_t aiao_choose(aiao_type_t type);
 
 #endif /* __AIAO_H */
