@@ -1,1 +1,0 @@
-SUBDIRS = sipeed_808
