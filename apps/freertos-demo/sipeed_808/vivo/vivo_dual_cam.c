@@ -194,28 +194,34 @@ static vivo_err_t _vivo_dual_cam_loop(void)
         vivo->lock();
 
     /**
-     *  Snap camera data andler
+     *  Snap camera data and choose a buffer to save
      * 
      *  Total two buffer, and three status(IDLE,FULL,BUSY)
-     * 
      *  ____________________
      * |  buffer0 | buffer1 |   
-     * |__________|_________|          
-     * |   IDLE   |  IDLE   |   0 is idle, 1 is idle, snap 0
-     * |   FULL   |  IDLE   |   0 is full, 1 is idle, snap 1
-     * |   BUSY   |  IDLE   |   0 is busy, 1 is idle, snap 1 
-     * |   FULL   |  BUSY   |   0 is full, 1 is busy, snap 0
-     * |   FULL   |  FULL   |   0 is full, 1 is full, snap 0 or 1(default 0)
-     * |   IDLE   |  BUSY   |   0 is idle, 1 is busy, snap 0
-     * |   IDLE   |  FULL   |   0 is idle, 1 is full, snap 0
+     * |__________|_________| (0 means buffer0, 1 means buffer1)       
+     * |   IDLE   |  IDLE   |   0 is idle, 1 is idle, save in 0
+     * |   FULL   |  IDLE   |   0 is full, 1 is idle, save in 1
+     * |   BUSY   |  IDLE   |   0 is busy, 1 is idle, save in 1 
+     * |   FULL   |  BUSY   |   0 is full, 1 is busy, save in 0
+     * |   FULL   |  FULL   |   0 is full, 1 is full, save in 0 or 1(default 0)
+     * |   IDLE   |  BUSY   |   0 is idle, 1 is busy, save in 0
+     * |   IDLE   |  FULL   |   0 is idle, 1 is full, save in 0
      * |   BUSY   |  BUSY   |   0 is busy, 1 is busy, error!!
-     * |   BUSY   |  FULL   |   0 is busy, 1 is full, snap 1
+     * |   BUSY   |  FULL   |   0 is busy, 1 is full, save in 1
      * |__________|_________|
      * 
      * (Note:snap will also set the status to BUSY)
     */
     // Choose buffer index
     int snap_idx = -1;
+    if (private->image_buffer_status[0] ==  VIVO_BUFFER_BUSY 
+        && private->image_buffer_status[1] == VIVO_BUFFER_BUSY)
+    {
+        err = VIVO_ERR_UNKNOWN;
+        goto _exit;
+    }
+
     if (private->image_buffer_status[0] != VIVO_BUFFER_BUSY
         && private->image_buffer_status[1] != VIVO_BUFFER_IDLE)
     {
@@ -224,13 +230,6 @@ static vivo_err_t _vivo_dual_cam_loop(void)
     else
     {
         snap_idx = 1;
-    }
-
-    if (private->image_buffer_status[0] ==  VIVO_BUFFER_BUSY 
-        && private->image_buffer_status[1] == VIVO_BUFFER_BUSY)
-    {
-        err = VIVO_ERR_UNKNOWN;
-        goto _exit;
     }
 
     // Snap
